@@ -5,11 +5,13 @@ import jetbrains.exodus.env.EnvironmentConfig
 import jetbrains.exodus.env.Environments
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
 import kotlin.comparisons.compareBy
-import kotlin.concurrent.thread
 
 object EntityStoreComparator {
-    const val UPDATE_PROCESSED_BATCH_SIZE = 256
+    private const val THREAD_POOL_SIZE = 8
+    private const val UPDATE_PROCESSED_BATCH_SIZE = 256
+    private val threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE)
 
     fun compareStores(
         oldStoreLocation: EntityStoreLocation,
@@ -18,7 +20,7 @@ object EntityStoreComparator {
     ): Entity {
         val futureComparison = CompletableFuture<Entity>()
 
-        thread {
+        threadPool.execute {
             fun getStore(storeLocation: EntityStoreLocation) = PersistentEntityStores.newInstance(
                 PersistentEntityStoreConfig().setRefactoringSkipAll(true),
                 Environments.newInstance(storeLocation.dir, EnvironmentConfig().setEnvIsReadonly(true).setGcEnabled(false)),
