@@ -1,0 +1,23 @@
+.infoBlocks {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0.5rem -0.5rem;
+
+    > div {
+        flex: 0%;
+        margin: 0.5rem;
+        min-width: 30rem;
+
+        &:not(:last-child) {
+            cursor: pointer;
+
+            &:hover {
+                background-color: LightSkyBlue;
+            }
+        }
+
+        &:last-child {
+            background-color: LightYellow;
+        }
+    }
+}

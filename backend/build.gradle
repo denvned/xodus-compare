@@ -1,0 +1,31 @@
+import org.akhikhl.gretty.AppAfterIntegrationTestTask
+import org.akhikhl.gretty.AppBeforeIntegrationTestTask
+
+apply plugin: 'kotlin'
+apply plugin: 'war'
+apply plugin: 'org.akhikhl.gretty'
+
+dependencies {
+    compile 'commons-io:commons-io:2.5'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.8.3'
+    compile 'com.graphql-java:graphql-java:2.1.0'
+    compile 'org.jboss.weld.servlet:weld-servlet-core:2.3.5.Final'
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile 'org.jetbrains.xodus:xodus-entity-store:1.0.1'
+    compile 'org.jetbrains.xodus:xodus-environment:1.0.1'
+    compile 'org.jetbrains.xodus:xodus-openAPI:1.0.1'
+}
+
+sourceCompatibility = 1.8
+
+task startServer(type: AppBeforeIntegrationTestTask) {
+    inplace = false
+}
+
+task stopServer(type: AppAfterIntegrationTestTask)
+
+gretty {
+    contextConfigFile = 'jetty9-env.xml'
+    contextPath = '/graphql'
+    httpPort = 4040
+}

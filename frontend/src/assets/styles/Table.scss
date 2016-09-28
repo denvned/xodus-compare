@@ -1,0 +1,9 @@
+.row {
+    cursor: pointer;
+
+    &:hover {
+        &, :global(.public_fixedDataTableCell_main) {
+            background-color: LightSkyBlue;
+        }
+    }
+}
