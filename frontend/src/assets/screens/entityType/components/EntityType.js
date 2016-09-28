@@ -7,6 +7,8 @@ import EntityTypeInfo from '../../../shared/components/EntityTypeInfo';
 import infoBlockStyles from '../../../shared/styles/infoBlocks.scss';
 import { AddedEntities, ChangedEntities, DeletedEntities } from './Entities';
 
+const ENTITIES_PER_PAGE = 20;
+
 function getInitialTabIndex({ viewer }) {
   const { entityType } = viewer;
   if (!entityType) {
@@ -28,6 +30,7 @@ function getInitialTabIndex({ viewer }) {
 
 class EntityType extends React.Component {
   static propTypes = {
+    relay: React.PropTypes.object.isRequired,
     viewer: React.PropTypes.shape({
       entityType: React.PropTypes.shape({
         localId: React.PropTypes.number.isRequired,
@@ -57,6 +60,12 @@ class EntityType extends React.Component {
     }
   }
 
+  _handleLoadMoreEntities(name) {
+    const { relay } = this.props;
+    const varName = `${name}EntitiesLimit`;
+    relay.setVariables({ [varName]: relay.variables[varName] + ENTITIES_PER_PAGE });
+  };
+
   _handleTabChange = (tabIndex) => {
     this.setState({ tabIndex });
   };
@@ -79,13 +88,13 @@ class EntityType extends React.Component {
 
         <Tabs fixed index={this.state.tabIndex} onChange={this._handleTabChange}>
           <Tab disabled={!addedEntities.totalCount} label={`Added entities (${addedEntities.totalCount})`}>
-            <AddedEntities entities={addedEntities} />
+            <AddedEntities entities={addedEntities} onLoadMore={() => this._handleLoadMoreEntities('added')} />
           </Tab>
           <Tab disabled={!changedEntities.totalCount} label={`Changed entities (${changedEntities.totalCount})`}>
-            <ChangedEntities entities={changedEntities} />
+            <ChangedEntities entities={changedEntities} onLoadMore={() => this._handleLoadMoreEntities('changed')} />
           </Tab>
           <Tab disabled={!deletedEntities.totalCount} label={`Deleted entities (${deletedEntities.totalCount})`}>
-            <DeletedEntities entities={deletedEntities} />
+            <DeletedEntities entities={deletedEntities} onLoadMore={() => this._handleLoadMoreEntities('deleted')} />
           </Tab>
         </Tabs>
       </div>
@@ -96,6 +105,9 @@ class EntityType extends React.Component {
 export default Relay.createContainer(EntityType, {
   initialVariables: {
     localId: null,
+    addedEntitiesLimit: ENTITIES_PER_PAGE,
+    changedEntitiesLimit: ENTITIES_PER_PAGE,
+    deletedEntitiesLimit: ENTITIES_PER_PAGE,
   },
   fragments: {
     viewer: () => Relay.QL`
@@ -105,15 +117,15 @@ export default Relay.createContainer(EntityType, {
           comparison {
             ${ComparisonInfo.getFragment('comparison')}
           }
-          addedEntities(first: 20) {
+          addedEntities(first: $addedEntitiesLimit) {
             totalCount
             ${AddedEntities.getFragment('entities')}
           }
-          changedEntities(first: 20) {
+          changedEntities(first: $changedEntitiesLimit) {
             totalCount
             ${ChangedEntities.getFragment('entities')}
           }
-          deletedEntities(first: 20) {
+          deletedEntities(first: $deletedEntitiesLimit) {
             totalCount
             ${DeletedEntities.getFragment('entities')}
           }

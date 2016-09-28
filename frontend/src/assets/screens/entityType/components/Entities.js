@@ -2,6 +2,7 @@ import { Cell, Column, ColumnGroup } from 'fixed-data-table';
 import React from 'react';
 import Relay from 'react-relay';
 import { withRouter } from 'react-router';
+import { Button } from 'react-toolbox/lib/button';
 
 import Table from '../../../shared/components/Table';
 import getEntityUrl from '../../../shared/getEntityUrl';
@@ -23,7 +24,11 @@ class Entities extends React.Component {
           linkCount: React.PropTypes.number.isRequired,
         }).isRequired,
       }).isRequired).isRequired,
+      pageInfo: React.PropTypes.shape({
+        hasNextPage: React.PropTypes.bool.isRequired,
+      }).isRequired,
     }).isRequired,
+    onLoadMore: React.PropTypes.func.isRequired,
     router: React.PropTypes.object.isRequired,
   };
   _entities = getEntities(this.props);
@@ -37,33 +42,38 @@ class Entities extends React.Component {
   };
 
   render() {
+    const { hasNextPage } = this.props.entities.pageInfo;
+
     return (
-      <Table columnGroups onRowClick={this._handleRowClick} rowsCount={this._entities.length}>
-        <ColumnGroup header={<Cell>Entity</Cell>}>
-          <Column
-            header={<Cell>Id</Cell>}
-            cell={({ rowIndex }) => <Cell>{this._entities[rowIndex].entityId}</Cell>}
-            width={100}
-          />
-        </ColumnGroup>
-        <ColumnGroup header={<Cell>Changed</Cell>}>
-          <Column
-            header={<Cell>Properties</Cell>}
-            cell={({ rowIndex }) => <Cell>{this._entities[rowIndex].propertyCount}</Cell>}
-            width={100}
-          />
-          <Column
-            header={<Cell>Blobs</Cell>}
-            cell={({ rowIndex }) => <Cell>{this._entities[rowIndex].blobCount}</Cell>}
-            width={100}
-          />
-          <Column
-            header={<Cell>Links</Cell>}
-            cell={({ rowIndex }) => <Cell>{this._entities[rowIndex].linkCount}</Cell>}
-            width={100}
-          />
-        </ColumnGroup>
-      </Table>
+      <div>
+        <Table columnGroups onRowClick={this._handleRowClick} rowsCount={this._entities.length}>
+          <ColumnGroup header={<Cell>Entity</Cell>}>
+            <Column
+              header={<Cell>Id</Cell>}
+              cell={({ rowIndex }) => <Cell>{this._entities[rowIndex].entityId}</Cell>}
+              width={100}
+            />
+          </ColumnGroup>
+          <ColumnGroup header={<Cell>Changed</Cell>}>
+            <Column
+              header={<Cell>Properties</Cell>}
+              cell={({ rowIndex }) => <Cell>{this._entities[rowIndex].propertyCount}</Cell>}
+              width={100}
+            />
+            <Column
+              header={<Cell>Blobs</Cell>}
+              cell={({ rowIndex }) => <Cell>{this._entities[rowIndex].blobCount}</Cell>}
+              width={100}
+            />
+            <Column
+              header={<Cell>Links</Cell>}
+              cell={({ rowIndex }) => <Cell>{this._entities[rowIndex].linkCount}</Cell>}
+              width={100}
+            />
+          </ColumnGroup>
+        </Table>
+        {hasNextPage && <Button label="Load more…" onClick={this.props.onLoadMore} />}
+      </div>
     );
   }
 }
@@ -84,6 +94,9 @@ export const AddedEntities = Relay.createContainer(EntitiesWithRouter, {
             linkCount
           }
         }
+        pageInfo {
+          hasNextPage
+        }
       }
     `,
   },
@@ -103,6 +116,9 @@ export const ChangedEntities = Relay.createContainer(EntitiesWithRouter, {
             linkCount
           }
         }
+        pageInfo {
+          hasNextPage
+        }
       }
     `,
   },
@@ -121,6 +137,9 @@ export const DeletedEntities = Relay.createContainer(EntitiesWithRouter, {
             blobCount
             linkCount
           }
+        }
+        pageInfo {
+          hasNextPage
         }
       }
     `,
