@@ -12,16 +12,46 @@ internal class EntityComparator(
     val oldEntity: Entity?,
     val newEntity: Entity?,
     val store: PersistentEntityStore,
-    val getEntity: () -> Entity,
     val entityTypes: Map<Int, Entity>
 ) {
     private val MAX_TRANSACTION_BATCH_SIZE = 1024
+    private var _entity: Entity? = null
 
     fun compareEntities() {
+        check(_entity == null)
+
         compareProps()
         compareBlobs()
         compareLinks()
     }
+
+    private val entity: Entity
+        get() {
+            if (_entity == null) {
+                _entity = store.computeInTransaction {
+                    val entityId = (oldEntity ?: newEntity)!!.id
+                    val entityType = entityTypes[entityId.typeId]!!
+                    when {
+                        oldEntity == null -> ComparisonEntityCreators.newAddedEntity(
+                            txn = it,
+                            entityType = entityType,
+                            entityId = entityId.localId
+                        )
+                        newEntity == null -> ComparisonEntityCreators.newDeletedEntity(
+                            txn = it,
+                            entityType = entityType,
+                            entityId = entityId.localId
+                        )
+                        else -> ComparisonEntityCreators.newChangedEntity(
+                            txn = it,
+                            entityType = entityType,
+                            entityId = entityId.localId
+                        )
+                    }
+                }
+            }
+            return _entity!!
+        }
 
     private fun compareProps() {
         val propChanges = ArrayList<Triple<String, Comparable<*>?, Comparable<*>?>>()
@@ -49,7 +79,7 @@ internal class EntityComparator(
                 for ((propName, oldValue, newValue) in propChanges) {
                     ComparisonEntityCreators.newProperty(
                         txn = it,
-                        entity = getEntity(),
+                        entity = entity,
                         name = propName,
                         oldValue = oldValue,
                         newValue = newValue
@@ -73,7 +103,7 @@ internal class EntityComparator(
                 store.executeInTransaction {
                     ComparisonEntityCreators.newBlob(
                         txn = it,
-                        entity = getEntity(),
+                        entity = entity,
                         name = blobName,
                         oldValue = oldEntity?.getBlob(blobName),
                         newValue = newEntity?.getBlob(blobName)
@@ -129,7 +159,7 @@ internal class EntityComparator(
                         link = store.computeInTransaction {
                             ComparisonEntityCreators.newLink(
                                 txn = it,
-                                entity = getEntity(),
+                                entity = entity,
                                 name = linkName
                             )
                         }

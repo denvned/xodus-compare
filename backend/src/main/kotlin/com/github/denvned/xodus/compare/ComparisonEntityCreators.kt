@@ -1,7 +1,6 @@
 package com.github.denvned.xodus.compare
 
 import jetbrains.exodus.entitystore.Entity
-import jetbrains.exodus.entitystore.PersistentEntityStore
 import jetbrains.exodus.entitystore.StoreTransaction
 import java.io.InputStream
 import java.util.*
@@ -9,22 +8,35 @@ import java.util.*
 internal object ComparisonEntityCreators {
     fun newComparison(
         txn: StoreTransaction,
-        oldStore: PersistentEntityStore,
-        newStore: PersistentEntityStore,
+        oldStoreDir: String,
+        oldStoreName: String,
+        newStoreDir: String,
+        newStoreName: String,
         date: Date,
         oldEntityCount: Long,
         newEntityCount: Long
     ): Entity {
         return txn.newEntity(ComparisonStoreNames.COMPARISON).apply {
-            setProperty(ComparisonStoreNames.Comparison.OLD_STORE_DIR, oldStore.location)
-            setProperty(ComparisonStoreNames.Comparison.OLD_STORE_NAME, oldStore.name)
-            setProperty(ComparisonStoreNames.Comparison.NEW_STORE_DIR, newStore.location)
-            setProperty(ComparisonStoreNames.Comparison.NEW_STORE_NAME, newStore.name)
+            setProperty(ComparisonStoreNames.Comparison.OLD_STORE_DIR, oldStoreDir)
+            setProperty(ComparisonStoreNames.Comparison.OLD_STORE_NAME, oldStoreName)
+            setProperty(ComparisonStoreNames.Comparison.NEW_STORE_DIR, newStoreDir)
+            setProperty(ComparisonStoreNames.Comparison.NEW_STORE_NAME, newStoreName)
             setProperty(ComparisonStoreNames.Comparison.DATE, date.time)
             setProperty(ComparisonStoreNames.Comparison.OLD_ENTITY_COUNT, oldEntityCount)
             setProperty(ComparisonStoreNames.Comparison.NEW_ENTITY_COUNT, newEntityCount)
             setProperty(ComparisonStoreNames.Comparison.OLD_ENTITIES_PROCESSED, 0L)
             setProperty(ComparisonStoreNames.Comparison.NEW_ENTITIES_PROCESSED, 0L)
+        }
+    }
+
+    fun updateComparisonProcessedCounts(
+        comparison: Entity,
+        oldEntitiesProcessed: Long,
+        newEntitiesProcessed: Long
+    ) {
+        comparison.run {
+            setProperty(ComparisonStoreNames.Comparison.OLD_ENTITIES_PROCESSED, oldEntitiesProcessed)
+            setProperty(ComparisonStoreNames.Comparison.NEW_ENTITIES_PROCESSED, newEntitiesProcessed)
         }
     }
 
