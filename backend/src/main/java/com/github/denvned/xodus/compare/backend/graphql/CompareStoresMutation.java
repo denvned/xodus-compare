@@ -36,18 +36,18 @@ public final class CompareStoresMutation {
         store.getCurrentTransaction().abort();
         store.beginReadonlyTransaction();
 
-        return new Payload(new ComparisonEdge(comparison), viewer);
+        return new Payload(new Comparison(comparison), viewer);
     }
 
     public static class Payload {
         @GraphQLField
-        public final ComparisonEdge newComparisonEdge;
+        public final Comparison comparison;
 
         @GraphQLField @GraphQLNonNull
         public final Viewer viewer;
 
-        Payload(ComparisonEdge newComparisonEdge, Viewer viewer) {
-            this.newComparisonEdge = newComparisonEdge;
+        Payload(Comparison comparison, Viewer viewer) {
+            this.comparison = comparison;
             this.viewer = viewer;
         }
     }

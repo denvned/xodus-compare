@@ -16,7 +16,7 @@ export default class AddProjectMutation extends Relay.Mutation {
   getFatQuery() {
     return Relay.QL`
       fragment on CompareStoresPayload @relay(pattern: true) {
-        newComparisonEdge
+        comparison
         viewer { comparisons }
       }
     `;
@@ -25,24 +25,16 @@ export default class AddProjectMutation extends Relay.Mutation {
   getConfigs() {
     return [
       {
-        type: 'RANGE_ADD',
-        parentName: 'viewer',
-        parentID: this.props.viewer.id,
-        connectionName: 'comparisons',
-        edgeName: 'newComparisonEdge',
-        rangeBehaviors: {
-          '': 'prepend',
-        },
+        type: 'FIELDS_CHANGE',
+        fieldIDs: { viewer: this.props.viewer.id },
       },
       {
         type: 'REQUIRED_CHILDREN',
         children: [
           Relay.QL`
             fragment on CompareStoresPayload {
-              newComparisonEdge {
-                node {
-                  id
-                }
+              comparison {
+                localId
               }
             }
           `,

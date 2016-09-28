@@ -9,7 +9,7 @@ import CompareStores from './CompareStores';
 import ProgressCell from './ProgressCell';
 
 function getComparisons({ viewer }) {
-  return viewer.comparisons.edges.map(({ node }) => node).map(({
+  return viewer.comparisons.map(({
     oldStoreName,
     newStoreName,
     date,
@@ -30,25 +30,21 @@ class Main extends React.Component {
   static propTypes = {
     router: React.PropTypes.object.isRequired,
     viewer: React.PropTypes.shape({
-      comparisons: React.PropTypes.shape({
-        edges: React.PropTypes.arrayOf(React.PropTypes.shape({
-          node: React.PropTypes.shape({
-            localId: React.PropTypes.number.isRequired,
-            oldStoreDir: React.PropTypes.string.isRequired,
-            oldStoreName: React.PropTypes.string.isRequired,
-            newStoreDir: React.PropTypes.string.isRequired,
-            newStoreName: React.PropTypes.string.isRequired,
-            date: React.PropTypes.number.isRequired,
-            addedEntityCount: React.PropTypes.number.isRequired,
-            changedEntityCount: React.PropTypes.number.isRequired,
-            deletedEntityCount: React.PropTypes.number.isRequired,
-            oldEntityCount: React.PropTypes.number.isRequired,
-            newEntityCount: React.PropTypes.number.isRequired,
-            oldEntitiesProcessed: React.PropTypes.number.isRequired,
-            newEntitiesProcessed: React.PropTypes.number.isRequired,
-          }).isRequired,
-        }).isRequired).isRequired,
-      }).isRequired,
+      comparisons: React.PropTypes.arrayOf(React.PropTypes.shape({
+        localId: React.PropTypes.number.isRequired,
+        oldStoreDir: React.PropTypes.string.isRequired,
+        oldStoreName: React.PropTypes.string.isRequired,
+        newStoreDir: React.PropTypes.string.isRequired,
+        newStoreName: React.PropTypes.string.isRequired,
+        date: React.PropTypes.number.isRequired,
+        addedEntityCount: React.PropTypes.number.isRequired,
+        changedEntityCount: React.PropTypes.number.isRequired,
+        deletedEntityCount: React.PropTypes.number.isRequired,
+        oldEntityCount: React.PropTypes.number.isRequired,
+        newEntityCount: React.PropTypes.number.isRequired,
+        oldEntitiesProcessed: React.PropTypes.number.isRequired,
+        newEntitiesProcessed: React.PropTypes.number.isRequired,
+      }).isRequired).isRequired,
     }).isRequired,
   };
   _comparisons = getComparisons(this.props);
@@ -131,24 +127,20 @@ export default Relay.createContainer(withRouter(Main), {
     viewer: () => Relay.QL`
       fragment on Viewer {
         ${CompareStores.getFragment('viewer')}
-        comparisons(first: 20) {
-          edges {
-            node {
-              localId
-              oldStoreDir
-              oldStoreName
-              newStoreDir
-              newStoreName
-              date
-              addedEntityCount
-              changedEntityCount
-              deletedEntityCount
-              oldEntityCount
-              newEntityCount
-              oldEntitiesProcessed
-              newEntitiesProcessed
-            }
-          }
+        comparisons {
+          localId
+          oldStoreDir
+          oldStoreName
+          newStoreDir
+          newStoreName
+          date
+          addedEntityCount
+          changedEntityCount
+          deletedEntityCount
+          oldEntityCount
+          newEntityCount
+          oldEntitiesProcessed
+          newEntitiesProcessed
         }
       }
     `,

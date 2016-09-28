@@ -9,9 +9,14 @@ import com.github.denvned.xodus.compare.ComparisonStoreNames;
 import com.github.denvned.xodus.compare.backend.ComparisonStoreProvider;
 import graphql.relay.Relay;
 import jetbrains.exodus.entitystore.Entity;
+import jetbrains.exodus.entitystore.EntityIterable;
 import jetbrains.exodus.entitystore.StoreTransaction;
 
 import javax.inject.Singleton;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 @Singleton
 public final class Viewer implements Node {
@@ -23,11 +28,22 @@ public final class Viewer implements Node {
     }
 
     @GraphQLField @GraphQLNonNull
-    public ComparisonConnection getComparisons(
-        @GraphQLName("first") Integer first,
-        @GraphQLName("after") String after
-    ) {
-        return new ComparisonConnection(first, after != null ? Long.parseLong(after) : null);
+    public List<@GraphQLNonNull Comparison> getComparisons() {
+        List<Comparison> result = new ArrayList<>();
+
+        StoreTransaction txn = ComparisonStoreProvider.getStore().getCurrentTransaction();
+        EntityIterable comparisons = txn.getAll(ComparisonStoreNames.COMPARISON);
+
+        for (Entity entity : comparisons) {
+            result.add(new Comparison(entity));
+        }
+
+        Collections.sort(
+            result,
+            Comparator.comparingLong(Comparison::getDate).reversed().thenComparingLong(Comparison::getLocalId)
+        );
+
+        return result;
     }
 
     @GraphQLField
