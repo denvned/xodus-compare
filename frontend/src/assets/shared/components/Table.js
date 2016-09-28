@@ -6,6 +6,7 @@ import styles from '../../styles/Table.scss';
 
 const HEADER_HEIGHT = 30;
 const ROW_HEIGHT = 50;
+const SCROLLBAR_AND_BORDERS = 17;
 
 export default class Table extends React.Component {
   static propTypes = {
@@ -16,7 +17,7 @@ export default class Table extends React.Component {
   render() {
     const { children, columnGroups, ...props } = this.props;
 
-    const height = (columnGroups ? 2 : 1) * HEADER_HEIGHT + props.rowsCount * ROW_HEIGHT + 2;
+    const height = (columnGroups ? 2 : 1) * HEADER_HEIGHT + props.rowsCount * ROW_HEIGHT + SCROLLBAR_AND_BORDERS;
 
     return (
       <DimensionsInjector style={{ height: `${height}px` }}>
