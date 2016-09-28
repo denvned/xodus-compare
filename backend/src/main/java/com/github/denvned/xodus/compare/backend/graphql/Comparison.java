@@ -72,12 +72,7 @@ public final class Comparison extends AbstractEntityBasedNode {
     public List<@GraphQLNonNull EntityType> getEntityTypes() {
         List<EntityType> result = new ArrayList<>();
 
-        StoreTransaction txn = ComparisonStoreProvider.getStore().getCurrentTransaction();
-
-        EntityIterable entityTypes =
-            txn.findLinks(ComparisonStoreNames.ENTITY_TYPE, entity, ComparisonStoreNames.EntityType.COMPARISON);
-
-        for (Entity entityType : entityTypes) {
+        for (Entity entityType : getEntityTypeIterable()) {
             EntityType entity = new EntityType(entityType);
             if (entity.getAddedEntities(null, null).getTotalCount() > 0
                 || entity.getChangedEntities(null, null).getTotalCount() > 0
@@ -93,5 +88,37 @@ public final class Comparison extends AbstractEntityBasedNode {
         }));
 
         return result;
+    }
+
+    @GraphQLField @GraphQLNonNull
+    public long addedEntityCount() {
+        long count = 0;
+        for (Entity entityType : getEntityTypeIterable()) {
+            count += new EntityType(entityType).getAddedEntities(null, null).getTotalCount();
+        }
+        return count;
+    }
+
+    @GraphQLField @GraphQLNonNull
+    public long changedEntityCount() {
+        long count = 0;
+        for (Entity entityType : getEntityTypeIterable()) {
+            count += new EntityType(entityType).getChangedEntities(null, null).getTotalCount();
+        }
+        return count;
+    }
+
+    @GraphQLField @GraphQLNonNull
+    public long deletedEntityCount() {
+        long count = 0;
+        for (Entity entityType : getEntityTypeIterable()) {
+            count += new EntityType(entityType).getDeletedEntities(null, null).getTotalCount();
+        }
+        return count;
+    }
+
+    private EntityIterable getEntityTypeIterable() {
+        StoreTransaction txn = ComparisonStoreProvider.getStore().getCurrentTransaction();
+        return txn.findLinks(ComparisonStoreNames.ENTITY_TYPE, entity, ComparisonStoreNames.EntityType.COMPARISON);
     }
 }

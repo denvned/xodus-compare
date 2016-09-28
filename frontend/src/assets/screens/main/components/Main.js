@@ -39,6 +39,9 @@ class Main extends React.Component {
             newStoreDir: React.PropTypes.string.isRequired,
             newStoreName: React.PropTypes.string.isRequired,
             date: React.PropTypes.number.isRequired,
+            addedEntityCount: React.PropTypes.number.isRequired,
+            changedEntityCount: React.PropTypes.number.isRequired,
+            deletedEntityCount: React.PropTypes.number.isRequired,
             oldEntityCount: React.PropTypes.number.isRequired,
             newEntityCount: React.PropTypes.number.isRequired,
             oldEntitiesProcessed: React.PropTypes.number.isRequired,
@@ -99,6 +102,23 @@ class Main extends React.Component {
                 width={100}
               />
             </ColumnGroup>
+            <ColumnGroup header={<Cell>Entities</Cell>}>
+              <Column
+                header={<Cell>Added</Cell>}
+                cell={({ rowIndex }) => <Cell>{comparisons[rowIndex].addedEntityCount}</Cell>}
+                width={100}
+              />
+              <Column
+                header={<Cell>Changed</Cell>}
+                cell={({ rowIndex }) => <Cell>{comparisons[rowIndex].changedEntityCount}</Cell>}
+                width={100}
+              />
+              <Column
+                header={<Cell>Deleted</Cell>}
+                cell={({ rowIndex }) => <Cell>{comparisons[rowIndex].deletedEntityCount}</Cell>}
+                width={100}
+              />
+            </ColumnGroup>
           </Table>
         </div>}
       </div>
@@ -120,6 +140,9 @@ export default Relay.createContainer(withRouter(Main), {
               newStoreDir
               newStoreName
               date
+              addedEntityCount
+              changedEntityCount
+              deletedEntityCount
               oldEntityCount
               newEntityCount
               oldEntitiesProcessed
