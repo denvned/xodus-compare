@@ -1,4 +1,4 @@
-import { Cell, Column } from 'fixed-data-table';
+import { Cell, Column, ColumnGroup } from 'fixed-data-table';
 import React from 'react';
 import Relay from 'react-relay';
 import { withRouter } from 'react-router';
@@ -6,14 +6,23 @@ import { withRouter } from 'react-router';
 import CellWithTooltip from '../../../shared/components/CellWithTooltip';
 import Table from '../../../shared/components/Table';
 import CompareStores from './CompareStores';
+import ProgressCell from './ProgressCell';
 
 function getComparisons({ viewer }) {
-  return viewer.comparisons.edges.map(({ node }) => ({
-    ...node,
-    storeName: node.oldStoreName === node.newStoreName ?
-      node.oldStoreName :
-      `${node.newStoreName} (${node.oldStoreName})`,
-    date: new Date(node.date),
+  return viewer.comparisons.edges.map(({ node }) => node).map(({
+    oldStoreName,
+    newStoreName,
+    date,
+    oldEntityCount,
+    newEntityCount,
+    oldEntitiesProcessed,
+    newEntitiesProcessed,
+    ...rest,
+  }) => ({
+    ...rest,
+    storeName: oldStoreName === newStoreName ? oldStoreName : `${newStoreName} (${oldStoreName})`,
+    date: new Date(date),
+    progress: Math.floor(100 * (oldEntitiesProcessed + newEntitiesProcessed) / (oldEntityCount + newEntityCount))
   }));
 }
 
@@ -30,6 +39,10 @@ class Main extends React.Component {
             newStoreDir: React.PropTypes.string.isRequired,
             newStoreName: React.PropTypes.string.isRequired,
             date: React.PropTypes.number.isRequired,
+            oldEntityCount: React.PropTypes.number.isRequired,
+            newEntityCount: React.PropTypes.number.isRequired,
+            oldEntitiesProcessed: React.PropTypes.number.isRequired,
+            newEntitiesProcessed: React.PropTypes.number.isRequired,
           }).isRequired,
         }).isRequired).isRequired,
       }).isRequired,
@@ -54,29 +67,40 @@ class Main extends React.Component {
       <div>
         <CompareStores viewer={viewer} />
 
-        <h3>Comparisons</h3>
-        <Table onRowClick={this._handleRowClick} rowsCount={comparisons.length}>
-          <Column
-            header={<Cell>Old store path</Cell>}
-            cell={({ rowIndex }) => <CellWithTooltip>{comparisons[rowIndex].oldStoreDir}</CellWithTooltip>}
-            width={500}
-          />
-          <Column
-            header={<Cell>New store path</Cell>}
-            cell={({ rowIndex }) => <CellWithTooltip>{comparisons[rowIndex].newStoreDir}</CellWithTooltip>}
-            width={500}
-          />
-          <Column
-            header={<Cell>Store name</Cell>}
-            cell={({ rowIndex }) => <CellWithTooltip>{comparisons[rowIndex].storeName}</CellWithTooltip>}
-            width={200}
-          />
-          <Column
-            header={<Cell>Date</Cell>}
-            cell={({ rowIndex }) => <Cell>{comparisons[rowIndex].date.toLocaleString()}</Cell>}
-            width={200}
-          />
-        </Table>
+        {!!comparisons.length && <div>
+          <h3>Comparisons</h3>
+          <Table columnGroups onRowClick={this._handleRowClick} rowsCount={comparisons.length}>
+            <ColumnGroup header={<Cell>Store</Cell>}>
+              <Column
+                header={<Cell>Old path</Cell>}
+                cell={({ rowIndex }) => <CellWithTooltip>{comparisons[rowIndex].oldStoreDir}</CellWithTooltip>}
+                width={300}
+              />
+              <Column
+                header={<Cell>New path</Cell>}
+                cell={({ rowIndex }) => <CellWithTooltip>{comparisons[rowIndex].newStoreDir}</CellWithTooltip>}
+                width={300}
+              />
+              <Column
+                header={<Cell>Name</Cell>}
+                cell={({ rowIndex }) => <CellWithTooltip>{comparisons[rowIndex].storeName}</CellWithTooltip>}
+                width={200}
+              />
+            </ColumnGroup>
+            <ColumnGroup header={<Cell>Date</Cell>}>
+              <Column
+                cell={({ rowIndex }) => <Cell>{comparisons[rowIndex].date.toLocaleString()}</Cell>}
+                width={200}
+              />
+            </ColumnGroup>
+            <ColumnGroup header={<Cell>Progress</Cell>}>
+              <Column
+                cell={({ rowIndex }) => <ProgressCell progress={comparisons[rowIndex].progress} />}
+                width={100}
+              />
+            </ColumnGroup>
+          </Table>
+        </div>}
       </div>
     );
   }
@@ -96,6 +120,10 @@ export default Relay.createContainer(withRouter(Main), {
               newStoreDir
               newStoreName
               date
+              oldEntityCount
+              newEntityCount
+              oldEntitiesProcessed
+              newEntitiesProcessed
             }
           }
         }
