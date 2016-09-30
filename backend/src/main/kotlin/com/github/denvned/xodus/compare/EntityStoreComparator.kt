@@ -1,6 +1,7 @@
 package com.github.denvned.xodus.compare
 
 import jetbrains.exodus.entitystore.*
+import jetbrains.exodus.env.Environment
 import jetbrains.exodus.env.EnvironmentConfig
 import jetbrains.exodus.env.Environments
 import java.util.*
@@ -21,21 +22,27 @@ object EntityStoreComparator {
         val futureComparison = CompletableFuture<Entity>()
 
         threadPool.execute {
+            var oldEnv: Environment? = null
+            var newEnv: Environment? = null
             var oldStore: PersistentEntityStore? = null
             var newStore: PersistentEntityStore? = null
 
             try {
-                fun getStore(storeLocation: EntityStoreLocation) = PersistentEntityStores.newInstance(
-                    PersistentEntityStoreConfig().setRefactoringSkipAll(true),
-                    Environments.newInstance(
-                        storeLocation.dir,
-                        EnvironmentConfig().setEnvIsReadonly(true).setGcEnabled(false)
-                    ),
-                    storeLocation.storeName
+                fun getEnv(storeDir: String) = Environments.newInstance(
+                    storeDir,
+                    EnvironmentConfig().setEnvIsReadonly(true).setGcEnabled(false)
                 )
 
-                oldStore = getStore(oldStoreLocation)
-                newStore = getStore(newStoreLocation)
+                fun getStore(env: Environment, storeName: String) = PersistentEntityStores.newInstance(
+                    PersistentEntityStoreConfig().setRefactoringSkipAll(true),
+                    env,
+                    storeName
+                )
+
+                oldEnv = getEnv(oldStoreLocation.dir)
+                newEnv = getEnv(newStoreLocation.dir)
+                oldStore = getStore(oldEnv, oldStoreLocation.storeName)
+                newStore = getStore(newEnv, newStoreLocation.storeName)
 
                 doCompareStores(
                     oldStore = oldStore,
@@ -46,8 +53,8 @@ object EntityStoreComparator {
             } catch (e: Throwable) {
                 futureComparison.completeExceptionally(e)
             } finally {
-                oldStore?.close()
-                newStore?.close()
+                oldStore?.close() ?: oldEnv?.close()
+                newStore?.close() ?: newEnv?.close()
             }
         }
 
