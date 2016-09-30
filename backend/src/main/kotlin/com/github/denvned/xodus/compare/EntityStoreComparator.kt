@@ -21,19 +21,49 @@ object EntityStoreComparator {
         val futureComparison = CompletableFuture<Entity>()
 
         threadPool.execute {
-            fun getStore(storeLocation: EntityStoreLocation) = PersistentEntityStores.newInstance(
-                PersistentEntityStoreConfig().setRefactoringSkipAll(true),
-                Environments.newInstance(storeLocation.dir, EnvironmentConfig().setEnvIsReadonly(true).setGcEnabled(false)),
-                storeLocation.storeName
-            )
-
-            val oldStore = getStore(oldStoreLocation)
-            val newStore = getStore(newStoreLocation)
-            val oldTxn = oldStore.beginReadonlyTransaction()
-            val newTxn = newStore.beginReadonlyTransaction()
-            val date = Date()
+            var oldStore: PersistentEntityStore? = null
+            var newStore: PersistentEntityStore? = null
 
             try {
+                fun getStore(storeLocation: EntityStoreLocation) = PersistentEntityStores.newInstance(
+                    PersistentEntityStoreConfig().setRefactoringSkipAll(true),
+                    Environments.newInstance(
+                        storeLocation.dir,
+                        EnvironmentConfig().setEnvIsReadonly(true).setGcEnabled(false)
+                    ),
+                    storeLocation.storeName
+                )
+
+                oldStore = getStore(oldStoreLocation)
+                newStore = getStore(newStoreLocation)
+
+                doCompareStores(
+                    oldStore = oldStore,
+                    newStore = newStore,
+                    store = store,
+                    futureComparison = futureComparison
+                )
+            } catch (e: Throwable) {
+                futureComparison.completeExceptionally(e)
+            } finally {
+                oldStore?.close()
+                newStore?.close()
+            }
+        }
+
+        return futureComparison.get()
+    }
+
+    private fun doCompareStores(
+        oldStore: PersistentEntityStore,
+        newStore: PersistentEntityStore,
+        store: PersistentEntityStore,
+        futureComparison: CompletableFuture<Entity>
+    ) {
+        oldStore.executeInReadonlyTransaction { oldTxn ->
+            newStore.executeInReadonlyTransaction { newTxn ->
+                val date = Date()
+
                 fun countEntities(txn: StoreTransaction): Long {
                     var count = 0L
                     txn.entityTypes.forEach { count += txn.getAll(it).size() }
@@ -112,14 +142,7 @@ object EntityStoreComparator {
                 }
 
                 updateProcessed()
-            } finally {
-                oldTxn.abort()
-                newTxn.abort()
-                oldStore.close()
-                newStore.close()
             }
         }
-
-        return futureComparison.get()
     }
 }
