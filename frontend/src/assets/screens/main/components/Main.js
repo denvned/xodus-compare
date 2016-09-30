@@ -22,7 +22,9 @@ function getComparisons({ viewer }) {
     ...rest,
     storeName: oldStoreName === newStoreName ? oldStoreName : `${newStoreName} (${oldStoreName})`,
     date: new Date(date),
-    progress: Math.floor(100 * (oldEntitiesProcessed + newEntitiesProcessed) / (oldEntityCount + newEntityCount))
+    progress: oldEntityCount + newEntityCount ?
+      Math.floor(100 * (oldEntitiesProcessed + newEntitiesProcessed) / (oldEntityCount + newEntityCount)) :
+      100
   }));
 }
 
