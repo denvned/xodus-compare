@@ -27,5 +27,4 @@ war {
 
 gretty {
     contextPath = '/'
-    extraResourceBase "$buildDir/assets"
 }
