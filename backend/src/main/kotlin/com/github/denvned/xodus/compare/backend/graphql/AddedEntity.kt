@@ -1,9 +1,5 @@
-package com.github.denvned.xodus.compare.backend.graphql;
+package com.github.denvned.xodus.compare.backend.graphql
 
-import jetbrains.exodus.entitystore.Entity;
+import jetbrains.exodus.entitystore.Entity
 
-public final class AddedEntity extends AbstractEntity {
-    public AddedEntity(Entity entity) {
-        super(entity);
-    }
-}
+class AddedEntity(entity: Entity) : AbstractEntity(entity)

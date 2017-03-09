@@ -2,29 +2,28 @@ apply plugin: 'war'
 apply plugin: 'org.akhikhl.gretty'
 
 task updateSchema(dependsOn: ':backend:startServer') << {
-    buildDir.mkdir()
-    def f = new File(buildDir, 'schema.json')
-    def introspectionQuery = new File("$projectDir/tools/introspectionQuery").text
-    def q = URLEncoder.encode(introspectionQuery, 'UTF-8')
-    new URL("http://localhost:4040/graphql?q=$q")
-        .withInputStream { input -> f.withOutputStream { it << input } }
+  buildDir.mkdir()
+  def f = new File(buildDir, 'schema.json')
+  def introspectionQuery = new File("$projectDir/tools/introspectionQuery").text
+  def q = URLEncoder.encode(introspectionQuery, 'UTF-8')
+  new URL("http://localhost:4040/graphql?q=$q").withInputStream { input -> f.withOutputStream { it << input } }
 }
 
 updateSchema.finalizedBy ':backend:stopServer'
 
 task installNodeModules(type: Exec) {
-    commandLine 'npm', 'install'
+  commandLine 'npm', 'install'
 }
 
 task buildAssets(type: Exec, dependsOn: [installNodeModules, updateSchema]) {
-    commandLine 'npm', 'run', 'build'
+  commandLine 'npm', 'run', 'build'
 }
 
 war {
-    dependsOn buildAssets
-    from "$buildDir/assets"
+  dependsOn buildAssets
+  from "$buildDir/assets"
 }
 
 gretty {
-    contextPath = '/'
+  contextPath = '/'
 }

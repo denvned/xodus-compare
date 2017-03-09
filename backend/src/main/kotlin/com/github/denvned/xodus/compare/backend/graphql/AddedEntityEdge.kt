@@ -1,16 +1,8 @@
-package com.github.denvned.xodus.compare.backend.graphql;
+package com.github.denvned.xodus.compare.backend.graphql
 
-import com.github.denvned.graphql.annotations.GraphQLField;
-import com.github.denvned.graphql.annotations.GraphQLNonNull;
-import jetbrains.exodus.entitystore.Entity;
+import jetbrains.exodus.entitystore.Entity
 
-public final class AddedEntityEdge extends AbstractEntityBasedEdge {
-    public AddedEntityEdge(Entity entity) {
-        super(entity);
-    }
+class AddedEntityEdge(entity: Entity) : AbstractEntityBasedEdge(entity) {
 
-    @GraphQLField @GraphQLNonNull
-    public AddedEntity getNode() {
-        return new AddedEntity(entity);
-    }
+  val node get() = AddedEntity(entity)
 }

@@ -5,12 +5,14 @@ import com.github.denvned.xodus.compare.backend.ComparisonStoreProvider
 import graphql.ExecutionResult
 
 class TransactionalGraphQLExecutionWrapper : GraphQLExecutionWrapper {
-    override fun wrapExecution(execute: () -> ExecutionResult): ExecutionResult {
-        ComparisonStoreProvider.store.beginReadonlyTransaction()
-        try {
-            return execute()
-        } finally {
-            ComparisonStoreProvider.store.currentTransaction!!.abort()
-        }
+  override fun wrapExecution(execute: () -> ExecutionResult): ExecutionResult {
+    ComparisonStoreProvider.store.run {
+      beginReadonlyTransaction()
+      try {
+        return execute()
+      } finally {
+        currentTransaction!!.abort()
+      }
     }
+  }
 }

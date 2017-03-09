@@ -12,32 +12,31 @@ import javax.servlet.ServletContextListener
 import javax.servlet.annotation.WebListener
 
 object ComparisonStoreProvider {
-    @JvmStatic
-    lateinit var store: PersistentEntityStore
-        // private set (commented because of https://youtrack.jetbrains.com/issue/KT-11585#comment=27-1621942)
+  @JvmStatic
+  lateinit var store: PersistentEntityStore
+    private set
 
-    @WebListener
-    class ContextListener : ServletContextListener {
-        @Resource(name = "comparisonStoreDir")
-        private lateinit var comparisonStoreDir: String
-        @Resource(name = "comparisonStoreName")
-        private lateinit var comparisonStoreName: String
+  @WebListener
+  class ContextListener : ServletContextListener {
+    @Resource(name = "comparisonStoreDir")
+    private lateinit var comparisonStoreDir: String
+    @Resource(name = "comparisonStoreName")
+    private lateinit var comparisonStoreName: String
 
-        @PostConstruct
-        private fun init() {
-            store =
-                PersistentEntityStores.newInstance(Environments.newInstance(comparisonStoreDir), comparisonStoreName)
+    @PostConstruct
+    private fun init() {
+      store = PersistentEntityStores.newInstance(Environments.newInstance(comparisonStoreDir), comparisonStoreName)
 
-            store.executeInTransaction {
-                store.registerCustomPropertyType(it, ArrayByteIterable::class.java, ArrayByteIterableBinding)
-            }
-        }
-
-        override fun contextInitialized(sce: ServletContextEvent) {
-        }
-
-        override fun contextDestroyed(sce: ServletContextEvent) {
-            store.close()
-        }
+      store.executeInTransaction {
+        store.registerCustomPropertyType(it, ArrayByteIterable::class.java, ArrayByteIterableBinding)
+      }
     }
+
+    override fun contextInitialized(sce: ServletContextEvent) {
+    }
+
+    override fun contextDestroyed(sce: ServletContextEvent) {
+      store.close()
+    }
+  }
 }

@@ -1,55 +1,39 @@
-package com.github.denvned.xodus.compare.backend.graphql;
+package com.github.denvned.xodus.compare.backend.graphql
 
-import com.github.denvned.graphql.PageInfo;
-import com.github.denvned.graphql.annotations.GraphQLField;
-import com.github.denvned.graphql.annotations.GraphQLNonNull;
-import jetbrains.exodus.entitystore.Entity;
-import jetbrains.exodus.entitystore.EntityIterable;
+import com.github.denvned.graphql.PageInfo
+import jetbrains.exodus.entitystore.Entity
+import jetbrains.exodus.entitystore.EntityIterable
+import java.util.*
 
-import java.util.ArrayList;
-import java.util.List;
+abstract class AbstractEntityBasedConnection(
+    private val iterable: EntityIterable,
+    private val first: Int?,
+    private val after: Long?) {
 
-public abstract class AbstractEntityBasedConnection {
-    private EntityIterable iterable;
-    private final Integer first;
-    private final Long after;
-    protected List<Entity> entities;
-    private boolean hasPrev;
-    private boolean hasNext;
+  protected val page by lazy {
+    val entities = ArrayList<Entity>(first ?: 8)
+    var hasPrev = false
+    var hasNext = false
 
-    public AbstractEntityBasedConnection(EntityIterable entities, Integer first, Long after) {
-        iterable = entities;
-        this.after = after;
-        this.first = first;
+    for (entity in iterable) {
+      if (entities.size == first ?: Int.MAX_VALUE) {
+        hasNext = true
+        break
+      }
+
+      if (entity.id.localId > after ?: -1) {
+        entities += entity
+      } else {
+        hasPrev = true
+      }
     }
 
-    protected void init() {
-        if (entities == null) {
-            entities = new ArrayList<>(first != null ? first : 8);
+    Page(entities, PageInfo(hasPrev, hasNext))
+  }
 
-            for (Entity entity : iterable) {
-                if (first != null && entities.size() >= first) {
-                    hasNext = true;
-                    break;
-                }
+  val pageInfo get() = page.info
 
-                if (after == null || entity.getId().getLocalId() > after) {
-                    entities.add(entity);
-                } else {
-                    hasPrev = true;
-                }
-            }
-        }
-    }
+  val totalCount get() = iterable.size()
 
-    @GraphQLField @GraphQLNonNull
-    public PageInfo getPageInfo() {
-        init();
-        return new PageInfo(hasPrev, hasNext);
-    }
-
-    @GraphQLField @GraphQLNonNull
-    public long getTotalCount() {
-        return iterable.size();
-    }
+  protected class Page(val entities: List<Entity>, val info: PageInfo)
 }

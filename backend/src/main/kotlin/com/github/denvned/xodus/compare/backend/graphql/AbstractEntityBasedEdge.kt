@@ -1,18 +1,8 @@
-package com.github.denvned.xodus.compare.backend.graphql;
+package com.github.denvned.xodus.compare.backend.graphql
 
-import com.github.denvned.graphql.annotations.GraphQLField;
-import com.github.denvned.graphql.annotations.GraphQLNonNull;
-import jetbrains.exodus.entitystore.Entity;
+import jetbrains.exodus.entitystore.Entity
 
-public abstract class AbstractEntityBasedEdge {
-    protected final Entity entity;
+abstract class AbstractEntityBasedEdge(protected val entity: Entity) {
 
-    public AbstractEntityBasedEdge(Entity entity) {
-        this.entity = entity;
-    }
-
-    @GraphQLField @GraphQLNonNull
-    public String getCursor() {
-        return Long.toString(entity.getId().getLocalId());
-    }
+  val cursor get() = entity.id.localId.toString()
 }

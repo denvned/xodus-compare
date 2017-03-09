@@ -1,108 +1,35 @@
-package com.github.denvned.xodus.compare.backend.graphql;
+package com.github.denvned.xodus.compare.backend.graphql
 
-import com.github.denvned.graphql.annotations.GraphQLField;
-import com.github.denvned.graphql.annotations.GraphQLNonNull;
-import com.github.denvned.xodus.compare.ComparisonStoreNames;
-import com.github.denvned.xodus.compare.backend.ComparisonStoreProvider;
-import jetbrains.exodus.entitystore.Entity;
-import jetbrains.exodus.entitystore.EntityIterable;
-import jetbrains.exodus.entitystore.StoreTransaction;
+import com.github.denvned.xodus.compare.ComparisonStoreNames
+import com.github.denvned.xodus.compare.backend.ComparisonStoreProvider
+import jetbrains.exodus.entitystore.Entity
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+abstract class AbstractEntity(entity: Entity) : AbstractEntityBasedNode(entity), EntityInterface {
 
-public abstract class AbstractEntity extends AbstractEntityBasedNode implements EntityInterface {
-    public AbstractEntity(Entity entity) {
-        super(entity);
-    }
+  override val type get() = EntityType(entity.getLink(ComparisonStoreNames.Entity.TYPE)!!)
 
-    @GraphQLField @GraphQLNonNull
-    public EntityType getType() {
-        return new EntityType(entity.getLink(ComparisonStoreNames.Entity.TYPE));
-    }
+  override val localId get() = entity.id.localId
 
-    @GraphQLField @GraphQLNonNull
-    public long getLocalId() {
-        return entity.getId().getLocalId();
-    }
+  override val entityId get() = entity.getProperty(ComparisonStoreNames.Entity.ID) as Long
 
-    @GraphQLField @GraphQLNonNull
-    public long getEntityId() {
-        return (long)entity.getProperty(ComparisonStoreNames.Entity.ID);
-    }
+  override val properties get() = propertyIterable.map(::Property).sortedBy(Property::name)
 
-    @GraphQLField @GraphQLNonNull
-    public List<@GraphQLNonNull Property> getProperties() {
-        List<Property> result = new ArrayList<>();
+  override val blobs get() = blobIterable.map(::Blob).sortedBy(Blob::name)
 
-        for (Entity property : getPropertyIterable()) {
-            result.add(new Property(property));
-        }
+  override val links get() = linkIterable.map(::Link).sortedBy(Link::name)
 
-        Collections.sort(result, Comparator.comparing(Property::getName));
+  override val propertyCount get() = propertyIterable.size()
 
-        return result;
-    }
+  override val blobCount get() = blobIterable.size()
 
-    @GraphQLField @GraphQLNonNull
-    public List<@GraphQLNonNull Blob> getBlobs() {
-        List<Blob> result = new ArrayList<>();
+  override val linkCount get() = linkIterable.size()
 
-        for (Entity blob : getBlobIterable()) {
-            result.add(new Blob(blob));
-        }
+  private val propertyIterable get() = getIterable(ComparisonStoreNames.PROPERTY, ComparisonStoreNames.Property.ENTITY)
 
-        Collections.sort(result, Comparator.comparing(Blob::getName));
+  private val blobIterable get() = getIterable(ComparisonStoreNames.BLOB, ComparisonStoreNames.Blob.ENTITY)
 
-        return result;
-    }
+  private val linkIterable get() = getIterable(ComparisonStoreNames.LINK, ComparisonStoreNames.Link.ENTITY)
 
-    @GraphQLField @GraphQLNonNull
-    public List<@GraphQLNonNull Link> getLinks() {
-        List<Link> result = new ArrayList<>();
-
-        for (Entity link : getLinkIterable()) {
-            result.add(new Link(link));
-        }
-
-        Collections.sort(result, Comparator.comparing(Link::getName));
-
-        return result;
-    }
-
-    @GraphQLField @GraphQLNonNull
-    public long getPropertyCount() {
-        return getPropertyIterable().size();
-    }
-
-    @GraphQLField @GraphQLNonNull
-    public long getBlobCount() {
-        return getBlobIterable().size();
-    }
-
-    @GraphQLField @GraphQLNonNull
-    public long getLinkCount() {
-        return getLinkIterable().size();
-    }
-
-    private EntityIterable getPropertyIterable() {
-        StoreTransaction txn = ComparisonStoreProvider.getStore().getCurrentTransaction();
-        return getIterable(ComparisonStoreNames.PROPERTY, ComparisonStoreNames.Property.ENTITY);
-    }
-
-    private EntityIterable getBlobIterable() {
-        StoreTransaction txn = ComparisonStoreProvider.getStore().getCurrentTransaction();
-        return getIterable(ComparisonStoreNames.BLOB, ComparisonStoreNames.Blob.ENTITY);
-    }
-
-    private EntityIterable getLinkIterable() {
-        return getIterable(ComparisonStoreNames.LINK, ComparisonStoreNames.Link.ENTITY);
-    }
-
-    private EntityIterable getIterable(String typeName, String linkName) {
-        StoreTransaction txn = ComparisonStoreProvider.getStore().getCurrentTransaction();
-        return txn.findLinks(typeName, entity, linkName);
-    }
+  private fun getIterable(typeName: String, linkName: String) =
+    ComparisonStoreProvider.store.currentTransaction!!.findLinks(typeName, entity, linkName)
 }

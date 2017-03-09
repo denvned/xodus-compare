@@ -1,231 +1,203 @@
 package com.github.denvned.graphql
 
-import com.github.denvned.graphql.annotations.*
-import com.github.denvned.graphql.annotations.GraphQLNonNull
+import com.github.denvned.graphql.annotations.GraphQLRelayMutation
 import graphql.Scalars
 import graphql.relay.Relay
 import graphql.schema.*
-import java.lang.reflect.*
+import graphql.schema.GraphQLNonNull
+import graphql.schema.GraphQLObjectType
 import java.util.*
+import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.reflect.*
+import kotlin.reflect.full.*
+import kotlin.reflect.jvm.javaMethod
 
 @Singleton
-class GraphQLTypeBuilder {
-    val allObjectTypes: Set<GraphQLObjectType>
-        get() {
-            return objectTypeMap.values.toHashSet()
+class GraphQLTypeBuilder @Inject constructor(private val strategy: GraphQLTypeBuildingStrategy) {
+
+  val allObjectTypes: Set<GraphQLObjectType>
+    get() = objectTypeMap.values.asSequence().filterIsInstance<GraphQLObjectType>().toHashSet()
+
+  private val inputObjectTypeMap = HashMap<KClass<*>, GraphQLInputObjectType>()
+  private val interfaceMap = HashMap<KClass<*>, GraphQLOutputType>()
+  private val objectTypeMap = HashMap<KClass<*>, GraphQLOutputType>()
+
+  private fun getInputType(type: KType, isId: Boolean): GraphQLInputType = type.clazz.let { clazz ->
+    when {
+      clazz == Boolean::class -> Scalars.GraphQLBoolean
+      clazz == Int::class -> Scalars.GraphQLInt
+      clazz == Long::class -> Scalars.GraphQLLong
+      clazz == Float::class || clazz == Double::class -> Scalars.GraphQLFloat
+      clazz == String::class -> if (isId) Scalars.GraphQLID else Scalars.GraphQLString
+      clazz.isSubclassOf(Iterable::class) && clazz.isSuperclassOf(List::class) && type.arguments.size == 1 ->
+          GraphQLList(getInputType(type.arguments[0].type!!, isId = isId))
+      else -> getInputObjectType(clazz)
+    }.let { if (type.isMarkedNullable) it as GraphQLInputType else GraphQLNonNull(it) }
+  }
+
+  private fun getOutputType(type: KType, isId: Boolean): GraphQLOutputType = type.clazz.let { clazz ->
+    when {
+      clazz == Boolean::class -> Scalars.GraphQLBoolean
+      clazz == Int::class -> Scalars.GraphQLInt
+      clazz == Long::class -> Scalars.GraphQLLong
+      clazz == Float::class || clazz == Double::class -> Scalars.GraphQLFloat
+      clazz == String::class -> if (isId) Scalars.GraphQLID else Scalars.GraphQLString
+      clazz == BooleanArray::class -> GraphQLList(Scalars.GraphQLBoolean)
+      clazz == IntArray::class -> GraphQLList(Scalars.GraphQLInt)
+      clazz == LongArray::class -> GraphQLList(Scalars.GraphQLLong)
+      (clazz == Array<Any>::class || clazz.isSubclassOf(Iterable::class)) && type.arguments.size == 1 ->
+        GraphQLList(getOutputType(type.arguments[0].type!!, isId))
+      strategy.isInterface(clazz) -> getInterface(clazz)
+      else -> getObjectType(clazz)
+    }.let { if (type.isMarkedNullable) it else GraphQLNonNull(it) }
+  }
+
+  private fun getInputObjectType(clazz: KClass<*>) = inputObjectTypeMap.getOrPut(clazz) {
+    clazz.toGraphQLInputObjectType()
+  }
+
+  private fun getObjectType(clazz: KClass<*>) = objectTypeMap.getOrPut(clazz) {
+    objectTypeMap[clazz] = GraphQLTypeReference(strategy.getName(clazz))
+    clazz.toGraphQLObjectType()
+  }
+
+  private fun getInterface(clazz: KClass<*>) = interfaceMap.getOrPut(clazz) {
+    interfaceMap[clazz] = GraphQLTypeReference(strategy.getName(clazz))
+    clazz.toGraphQLInterfaceType()
+  }
+
+  private fun KClass<*>.toGraphQLInputObjectType() = let { clazz ->
+    GraphQLInputObjectType.newInputObject().run {
+      name(strategy.getName(clazz))
+      fields(buildInputFields(primaryConstructor!!))
+    }.build()
+  }
+
+  private fun KClass<*>.toGraphQLObjectType() = let { clazz ->
+    GraphQLObjectType.newObject().apply {
+      name(strategy.getName(clazz))
+      fields(buildFields(clazz, sourceFetcher))
+
+      allSuperclasses.asSequence().filter(strategy::isInterface).forEach {
+        withInterface(getInterface(it) as GraphQLInterfaceType)
+      }
+    }.build()
+  }
+
+  private fun KClass<*>.toGraphQLInterfaceType() = let { clazz ->
+    GraphQLInterfaceType.newInterface().apply {
+      name(strategy.getName(clazz))
+      fields(buildFields(clazz, sourceFetcher))
+      typeResolver {
+        it::class.allSuperclasses.asSequence().map { objectTypeMap[it::class] }.filterNotNull().first()
+          as GraphQLObjectType
+      }
+    }.build()
+  }
+
+  private fun KFunction<*>.toRelayMutation(objectFetcher: DataFetcher): GraphQLFieldDefinition {
+    return Relay().mutationWithClientMutationId(
+        name.let { it[0].toUpperCase() + it.substring(1) },
+        name,
+        buildInputFields(this),
+        buildFields(returnType.classifier as KClass<*>, sourceOutputFetcher)) { env ->
+      val input = env.getArgument<Map<String, Any>>("input")
+      MutationResult(
+        clientMutationId = input["clientMutationId"] as String,
+        output = callBy(convertArguments(valueParameters, input).apply {
+          put(instanceParameter!!, objectFetcher.get(env))
+        })!!)
+    }
+  }
+
+  private fun buildInputFields(func: KFunction<*>) = func.valueParameters.map { it.toGraphQLInputObjectField() }
+
+  fun buildFields(clazz: KClass<*>, objectFetcher: DataFetcher) = (
+      clazz.memberProperties.asSequence().filter { it.isIncluded }.map { it.toGraphQLField(objectFetcher) }
+        + clazz.memberFunctions.asSequence().filter { it.isIncluded }.map {
+          if (it.findAnnotation<GraphQLRelayMutation>() != null) {
+            it.toRelayMutation(objectFetcher)
+          } else {
+            it.toGraphQLField(objectFetcher)
+          }
         }
+      ).toList()
 
-    private val inputTypeMap = hashMapOf<Class<*>, (AnnotatedType) -> GraphQLInputType>(
-        Boolean::class.java to { annotatedType ->
-            Scalars.GraphQLBoolean
-        },
-        java.lang.Boolean::class.java to { annotatedType ->
-            Scalars.GraphQLBoolean
-        },
-        Int::class.java to { annotatedType ->
-            Scalars.GraphQLInt
-        },
-        Integer::class.java to { annotatedType ->
-            Scalars.GraphQLInt
-        },
-        Long::class.java to { annotatedType ->
-            Scalars.GraphQLLong
-        },
-        java.lang.Long::class.java to { annotatedType ->
-            Scalars.GraphQLLong
-        },
-        String::class.java to { annotatedType ->
-            if (annotatedType.isAnnotationPresent(GraphQLID::class.java)) Scalars.GraphQLID else Scalars.GraphQLString
-        },
-        List::class.java to { annotatedType ->
-            GraphQLList(getInputType((annotatedType as AnnotatedParameterizedType).annotatedActualTypeArguments[0]))
+  private val KCallable<*>.isIncluded get() = !strategy.isIgnored(this) && visibility == KVisibility.PUBLIC
+
+  private val KFunction<*>.isIncluded get() = (this as KCallable<*>).isIncluded && javaMethod !in OBJECT_METHODS
+
+  private fun <T> KProperty1<T, *>.toGraphQLField(objectFetcher: DataFetcher) = let { property ->
+    GraphQLFieldDefinition.newFieldDefinition().apply {
+      name(strategy.getName(property))
+      type(getOutputType(returnType, strategy.isId(property)))
+      dataFetcher { env -> get(objectFetcher.get(env) as T) }
+    }.build()
+  }
+
+  private fun KFunction<*>.toGraphQLField(objectFetcher: DataFetcher) = let { function ->
+    GraphQLFieldDefinition.newFieldDefinition().apply {
+      name(strategy.getName(function))
+      type(getOutputType(returnType, strategy.isId(function)))
+      valueParameters.forEach { argument(it.toGraphQLArgument()) }
+      dataFetcher { env -> call(objectFetcher.get(env), *env.arguments.values.toTypedArray()) }
+    }.build()
+  }
+
+  private fun KParameter.toGraphQLArgument() = let { parameter ->
+    GraphQLArgument.newArgument().apply {
+      name(strategy.getName(parameter))
+      type(getInputType(type, isId = strategy.isId(parameter)))
+      if (isOptional) {
+        defaultValue(DefaultValue(strategy.getDefaultValue(parameter)))
+      }
+    }.build()
+  }
+
+  private fun KParameter.toGraphQLInputObjectField() = let { parameter ->
+    GraphQLInputObjectField.newInputObjectField().apply {
+      name(strategy.getName(parameter))
+      type(getInputType(type, isId = strategy.isId(parameter)))
+      if (isOptional) {
+        defaultValue(DefaultValue(strategy.getDefaultValue(parameter)))
+      }
+    }.build()
+  }
+
+  private fun convertArgumentValue(type: KType, value: Any?): Any? = type.clazz.let { clazz ->
+    when {
+      clazz == Boolean::class || clazz == Int::class || clazz == Long::class || clazz == String::class -> value
+      clazz == Float::class -> (value as? Double)?.toFloat() ?: value
+      clazz == Double::class -> (value as? Float)?.toDouble() ?: value
+      clazz.isSuperclassOf(List::class) ->
+        (value as List<*>).map { convertArgumentValue(type.arguments[0].type!!, it) }
+      else -> clazz.primaryConstructor!!.run { callBy(convertArguments(valueParameters, value as Map<String, *>)) }
+    }
+  }
+
+  private fun convertArguments(parameters: List<KParameter>, values: Map<String, *>) =
+      HashMap<KParameter, Any?>().apply {
+        parameters.forEach { param ->
+          values[param.name].takeIf { it !is DefaultValue }?.let {
+            put(param, convertArgumentValue(param.type, it))
+          }
         }
-    )
-    private val outputTypeMap = hashMapOf<Class<*>, (AnnotatedType) -> GraphQLOutputType>(
-        Boolean::class.java to { annotatedType ->
-            Scalars.GraphQLBoolean
-        },
-        java.lang.Boolean::class.java to { annotatedType ->
-            Scalars.GraphQLBoolean
-        },
-        Int::class.java to { annotatedType ->
-            Scalars.GraphQLInt
-        },
-        Integer::class.java to { annotatedType ->
-            Scalars.GraphQLInt
-        },
-        Long::class.java to { annotatedType ->
-            Scalars.GraphQLLong
-        },
-        java.lang.Long::class.java to { annotatedType ->
-            Scalars.GraphQLLong
-        },
-        String::class.java to { annotatedType ->
-            if (annotatedType.isAnnotationPresent(GraphQLID::class.java)) Scalars.GraphQLID else Scalars.GraphQLString
-        },
-        List::class.java to { annotatedType ->
-            GraphQLList(getOutputType((annotatedType as AnnotatedParameterizedType).annotatedActualTypeArguments[0]))
-        }
-    )
-    private val objectTypeMap = HashMap<Class<*>, GraphQLObjectType>()
+      }
 
-    private fun getGraphQLName(clazz: Class<*>) =
-        clazz.getAnnotation(GraphQLName::class.java)?.value ?: clazz.simpleName
+  companion object {
+    private val OBJECT_METHODS =
+      sequenceOf(Any::equals, Any::hashCode, Any::toString).map { it.javaMethod }.toHashSet()
 
-    private fun getClass(annotatedType: AnnotatedType) =
-        annotatedType.type.let { if (it is ParameterizedType) it.rawType else it } as Class<*>
+    class MutationResult(val clientMutationId: String, val output: Any)
 
-    private fun getInputType(annotatedType: AnnotatedType): GraphQLInputType =
-        inputTypeMap[getClass(annotatedType)]!!(annotatedType).let {
-            if (annotatedType.isAnnotationPresent(GraphQLNonNull::class.java)) {
-                graphql.schema.GraphQLNonNull(it)
-            } else {
-                it
-            }
-        }
-
-    private fun getOutputType(annotatedType: AnnotatedType): GraphQLOutputType =
-        getClass(annotatedType).let { clazz ->
-            outputTypeMap[clazz]?.invoke(annotatedType) ?: buildOutputType(clazz)
-        }.let {
-            if (annotatedType.isAnnotationPresent(GraphQLNonNull::class.java)) {
-                graphql.schema.GraphQLNonNull(it)
-            } else {
-                it
-            }
-        }
-
-    private fun buildOutputType(clazz: Class<*>): GraphQLOutputType {
-        for (typeDependency in clazz.getAnnotationsByType(GraphQLTypeDependency::class.java)) {
-            typeDependency.value.java.let {
-                if (it !in objectTypeMap) {
-                    buildOutputType(it)
-                }
-            }
-        }
-
-        outputTypeMap[clazz] = { GraphQLTypeReference(getGraphQLName(clazz)) }
-
-        return (if (clazz.isInterface) {
-            buildInterface(clazz)
-        } else {
-            buildObjectType(clazz).apply {
-                objectTypeMap[clazz] = this
-            }
-        } as GraphQLOutputType).apply {
-            outputTypeMap[clazz] = { this }
-        }
+    private class DefaultValue(val value: Any) {
+      override fun toString() = value.toString()
     }
 
-    private fun buildInterface(clazz: Class<*>) =
-        GraphQLInterfaceType.newInterface().apply {
-            name(getGraphQLName(clazz))
-            fields(buildFields(clazz, DataFetcher { it -> it.source }))
-            typeResolver { objectTypeMap[it.javaClass]!! }
-        }.build()
+    private val sourceFetcher = DataFetcher { it.source }
+    private val sourceOutputFetcher = DataFetcher { (it.source as MutationResult).output }
 
-    private fun buildObjectType(clazz: Class<*>) =
-        GraphQLObjectType.newObject().apply {
-            name(getGraphQLName(clazz))
-            fields(buildFields(clazz, DataFetcher { it -> it.source }))
-
-            fun addInterfaces(c: Class<*>) {
-                for (annotatedInterface in c.annotatedInterfaces) {
-                    withInterface(getOutputType(annotatedInterface) as GraphQLInterfaceType)
-                }
-
-                for (`interface` in c.interfaces) {
-                    addInterfaces(`interface`)
-                }
-
-                c.superclass?.let { addInterfaces(it) }
-            }
-
-            addInterfaces(clazz)
-        }.build()
-
-    private fun buildMutation(method: Method, objectFetcher: DataFetcher): GraphQLFieldDefinition {
-        val inputFields = buildInputObjectFields(method)
-
-        class MutationResult(val clientMutationId: String, val output: Any)
-
-        return Relay().mutationWithClientMutationId(
-            method.name.let { it[0].toUpperCase() + it.substring(1) },
-            method.name,
-            inputFields,
-            buildFields(method.returnType, DataFetcher { it -> (it.source as MutationResult).output })
-        ) { env ->
-            val input = env.getArgument<Map<String, Any>>("input")
-            MutationResult(
-                clientMutationId = input["clientMutationId"] as String,
-                output = method.invoke(objectFetcher.get(env), *Array(method.parameterCount) {
-                    input[inputFields[it].name]
-                })
-            )
-        }
-    }
-
-    fun buildFields(clazz: Class<*>, objectFetcher: DataFetcher) =
-        ArrayList<GraphQLFieldDefinition>().apply {
-            for (field in clazz.fields) {
-                if (field.isAnnotationPresent(GraphQLField::class.java)) {
-                    this += buildField(field, objectFetcher)
-                }
-            }
-
-            for (method in clazz.methods) {
-                if (method.isAnnotationPresent(GraphQLRelayMutation::class.java)) {
-                    this += buildMutation(method, objectFetcher)
-                } else if (method.isAnnotationPresent(GraphQLField::class.java)) {
-                    this += buildField(method, objectFetcher)
-                }
-            }
-        }
-
-    private fun buildField(field: Field, objectFetcher: DataFetcher) =
-        GraphQLFieldDefinition.newFieldDefinition().apply {
-            name(field.name)
-
-            type(getOutputType(field.annotatedType))
-
-            dataFetcher { env ->
-                field.get(objectFetcher.get(env))
-            }
-        }.build()
-
-    private fun buildField(method: Method, objectFetcher: DataFetcher) =
-        GraphQLFieldDefinition.newFieldDefinition().apply {
-            name(method.name.replaceFirst(Regex("^(?:get|is|set)([A-Z])"), "$1").let {
-                it[0].toLowerCase() + it.substring(1)
-            })
-            type(getOutputType(method.annotatedReturnType))
-
-            for (parameter in method.parameters) {
-                argument(buildArgument(parameter))
-            }
-
-            dataFetcher { env ->
-                method.invoke(objectFetcher.get(env), *env.arguments.values.toTypedArray())
-            }
-        }.build()
-
-    private fun buildArgument(parameter: Parameter) =
-        GraphQLArgument.newArgument().apply {
-            name(parameter.getAnnotation(GraphQLName::class.java)?.value ?: parameter.name)
-            type(getInputType(parameter.annotatedType))
-        }.build()
-
-    private fun buildInputObjectFields(method: Method) =
-        ArrayList<GraphQLInputObjectField>().apply {
-            for (parameter in method.parameters) {
-                this += buildInputObjectField(parameter)
-            }
-        }
-
-    private fun buildInputObjectField(parameter: Parameter) =
-        GraphQLInputObjectField.newInputObjectField().apply {
-            name(parameter.getAnnotation(GraphQLName::class.java)?.value ?: parameter.name)
-            type(getInputType(parameter.annotatedType))
-        }.build()
+    private val KType.clazz get() = classifier as KClass<*>
+  }
 }

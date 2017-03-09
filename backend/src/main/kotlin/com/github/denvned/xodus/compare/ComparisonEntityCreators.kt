@@ -6,139 +6,139 @@ import java.io.InputStream
 import java.util.*
 
 internal object ComparisonEntityCreators {
-    fun newComparison(
-        txn: StoreTransaction,
-        oldStoreDir: String,
-        oldStoreName: String,
-        newStoreDir: String,
-        newStoreName: String,
-        date: Date,
-        oldEntityCount: Long,
-        newEntityCount: Long
-    ): Entity {
-        return txn.newEntity(ComparisonStoreNames.COMPARISON).apply {
-            setProperty(ComparisonStoreNames.Comparison.OLD_STORE_DIR, oldStoreDir)
-            setProperty(ComparisonStoreNames.Comparison.OLD_STORE_NAME, oldStoreName)
-            setProperty(ComparisonStoreNames.Comparison.NEW_STORE_DIR, newStoreDir)
-            setProperty(ComparisonStoreNames.Comparison.NEW_STORE_NAME, newStoreName)
-            setProperty(ComparisonStoreNames.Comparison.DATE, date.time)
-            setProperty(ComparisonStoreNames.Comparison.OLD_ENTITY_COUNT, oldEntityCount)
-            setProperty(ComparisonStoreNames.Comparison.NEW_ENTITY_COUNT, newEntityCount)
-            setProperty(ComparisonStoreNames.Comparison.OLD_ENTITIES_PROCESSED, 0L)
-            setProperty(ComparisonStoreNames.Comparison.NEW_ENTITIES_PROCESSED, 0L)
-        }
+  fun newComparison(
+    txn: StoreTransaction,
+    oldStoreDir: String,
+    oldStoreName: String,
+    newStoreDir: String,
+    newStoreName: String,
+    date: Date,
+    oldEntityCount: Long,
+    newEntityCount: Long
+  ): Entity {
+    return txn.newEntity(ComparisonStoreNames.COMPARISON).apply {
+      setProperty(ComparisonStoreNames.Comparison.OLD_STORE_DIR, oldStoreDir)
+      setProperty(ComparisonStoreNames.Comparison.OLD_STORE_NAME, oldStoreName)
+      setProperty(ComparisonStoreNames.Comparison.NEW_STORE_DIR, newStoreDir)
+      setProperty(ComparisonStoreNames.Comparison.NEW_STORE_NAME, newStoreName)
+      setProperty(ComparisonStoreNames.Comparison.DATE, date.time)
+      setProperty(ComparisonStoreNames.Comparison.OLD_ENTITY_COUNT, oldEntityCount)
+      setProperty(ComparisonStoreNames.Comparison.NEW_ENTITY_COUNT, newEntityCount)
+      setProperty(ComparisonStoreNames.Comparison.OLD_ENTITIES_PROCESSED, 0L)
+      setProperty(ComparisonStoreNames.Comparison.NEW_ENTITIES_PROCESSED, 0L)
     }
+  }
 
-    fun updateComparisonProcessedCounts(
-        comparison: Entity,
-        oldEntitiesProcessed: Long,
-        newEntitiesProcessed: Long
-    ) {
-        comparison.run {
-            setProperty(ComparisonStoreNames.Comparison.OLD_ENTITIES_PROCESSED, oldEntitiesProcessed)
-            setProperty(ComparisonStoreNames.Comparison.NEW_ENTITIES_PROCESSED, newEntitiesProcessed)
-        }
+  fun updateComparisonProcessedCounts(
+    comparison: Entity,
+    oldEntitiesProcessed: Long,
+    newEntitiesProcessed: Long
+  ) {
+    comparison.run {
+      setProperty(ComparisonStoreNames.Comparison.OLD_ENTITIES_PROCESSED, oldEntitiesProcessed)
+      setProperty(ComparisonStoreNames.Comparison.NEW_ENTITIES_PROCESSED, newEntitiesProcessed)
     }
+  }
 
-    fun newEntityType(
-        txn: StoreTransaction,
-        comparison: Entity,
-        id: Int,
-        oldName: String?,
-        newName: String?
-    ): Entity {
-        return txn.newEntity(ComparisonStoreNames.ENTITY_TYPE).apply {
-            setLink(ComparisonStoreNames.EntityType.COMPARISON, comparison)
-            setProperty(ComparisonStoreNames.EntityType.ID, id)
-            oldName?.let { setProperty(ComparisonStoreNames.EntityType.OLD_NAME, it) }
-            newName?.let { setProperty(ComparisonStoreNames.EntityType.NEW_NAME, it) }
-        }
+  fun newEntityType(
+    txn: StoreTransaction,
+    comparison: Entity,
+    id: Int,
+    oldName: String?,
+    newName: String?
+  ): Entity {
+    return txn.newEntity(ComparisonStoreNames.ENTITY_TYPE).apply {
+      setLink(ComparisonStoreNames.EntityType.COMPARISON, comparison)
+      setProperty(ComparisonStoreNames.EntityType.ID, id)
+      oldName?.let { setProperty(ComparisonStoreNames.EntityType.OLD_NAME, it) }
+      newName?.let { setProperty(ComparisonStoreNames.EntityType.NEW_NAME, it) }
     }
+  }
 
-    fun newAddedEntity(txn: StoreTransaction, entityType: Entity, entityId: Long): Entity {
-        return txn.newEntity(ComparisonStoreNames.ADDED_ENTITY).apply {
-            setLink(ComparisonStoreNames.Entity.TYPE, entityType)
-            setProperty(ComparisonStoreNames.Entity.ID, entityId)
-        }
+  fun newAddedEntity(txn: StoreTransaction, entityType: Entity, entityId: Long): Entity {
+    return txn.newEntity(ComparisonStoreNames.ADDED_ENTITY).apply {
+      setLink(ComparisonStoreNames.Entity.TYPE, entityType)
+      setProperty(ComparisonStoreNames.Entity.ID, entityId)
     }
+  }
 
-    fun newChangedEntity(txn: StoreTransaction, entityType: Entity, entityId: Long): Entity {
-        return txn.newEntity(ComparisonStoreNames.CHANGED_ENTITY).apply {
-            setLink(ComparisonStoreNames.Entity.TYPE, entityType)
-            setProperty(ComparisonStoreNames.Entity.ID, entityId)
-        }
+  fun newChangedEntity(txn: StoreTransaction, entityType: Entity, entityId: Long): Entity {
+    return txn.newEntity(ComparisonStoreNames.CHANGED_ENTITY).apply {
+      setLink(ComparisonStoreNames.Entity.TYPE, entityType)
+      setProperty(ComparisonStoreNames.Entity.ID, entityId)
     }
+  }
 
-    fun newDeletedEntity(txn: StoreTransaction, entityType: Entity, entityId: Long): Entity {
-        return txn.newEntity(ComparisonStoreNames.DELETED_ENTITY).apply {
-            setLink(ComparisonStoreNames.Entity.TYPE, entityType)
-            setProperty(ComparisonStoreNames.Entity.ID, entityId)
-        }
+  fun newDeletedEntity(txn: StoreTransaction, entityType: Entity, entityId: Long): Entity {
+    return txn.newEntity(ComparisonStoreNames.DELETED_ENTITY).apply {
+      setLink(ComparisonStoreNames.Entity.TYPE, entityType)
+      setProperty(ComparisonStoreNames.Entity.ID, entityId)
     }
+  }
 
-    fun newProperty(
-        txn: StoreTransaction,
-        entity: Entity,
-        name: String,
-        oldValue: Comparable<*>?,
-        newValue: Comparable<*>?
-    ): Entity {
-        return txn.newEntity(ComparisonStoreNames.PROPERTY).apply {
-            setLink(ComparisonStoreNames.Property.ENTITY, entity)
-            setProperty(ComparisonStoreNames.Property.NAME, name)
-            oldValue?.let { setProperty(ComparisonStoreNames.Property.OLD_VALUE, oldValue) }
-            newValue?.let { setProperty(ComparisonStoreNames.Property.NEW_VALUE, newValue) }
-        }
+  fun newProperty(
+    txn: StoreTransaction,
+    entity: Entity,
+    name: String,
+    oldValue: Comparable<*>?,
+    newValue: Comparable<*>?
+  ): Entity {
+    return txn.newEntity(ComparisonStoreNames.PROPERTY).apply {
+      setLink(ComparisonStoreNames.Property.ENTITY, entity)
+      setProperty(ComparisonStoreNames.Property.NAME, name)
+      oldValue?.let { setProperty(ComparisonStoreNames.Property.OLD_VALUE, oldValue) }
+      newValue?.let { setProperty(ComparisonStoreNames.Property.NEW_VALUE, newValue) }
     }
+  }
 
-    fun newBlob(
-        txn: StoreTransaction,
-        entity: Entity,
-        name: String,
-        oldValue: InputStream?,
-        newValue: InputStream?
-    ): Entity {
-        return txn.newEntity(ComparisonStoreNames.BLOB).apply {
-            setLink(ComparisonStoreNames.Blob.ENTITY, entity)
-            setProperty(ComparisonStoreNames.Blob.NAME, name)
-            oldValue?.let { setBlob(ComparisonStoreNames.Blob.OLD_VALUE, it) }
-            newValue?.let { setBlob(ComparisonStoreNames.Blob.NEW_VALUE, it) }
-        }
+  fun newBlob(
+    txn: StoreTransaction,
+    entity: Entity,
+    name: String,
+    oldValue: InputStream?,
+    newValue: InputStream?
+  ): Entity {
+    return txn.newEntity(ComparisonStoreNames.BLOB).apply {
+      setLink(ComparisonStoreNames.Blob.ENTITY, entity)
+      setProperty(ComparisonStoreNames.Blob.NAME, name)
+      oldValue?.let { setBlob(ComparisonStoreNames.Blob.OLD_VALUE, it) }
+      newValue?.let { setBlob(ComparisonStoreNames.Blob.NEW_VALUE, it) }
     }
+  }
 
-    fun newLink(txn: StoreTransaction, entity: Entity, name: String): Entity {
-        return txn.newEntity(ComparisonStoreNames.LINK).apply {
-            setLink(ComparisonStoreNames.Link.ENTITY, entity)
-            setProperty(ComparisonStoreNames.Link.NAME, name)
-        }
+  fun newLink(txn: StoreTransaction, entity: Entity, name: String): Entity {
+    return txn.newEntity(ComparisonStoreNames.LINK).apply {
+      setLink(ComparisonStoreNames.Link.ENTITY, entity)
+      setProperty(ComparisonStoreNames.Link.NAME, name)
     }
+  }
 
-    fun newLinkTargetType(txn: StoreTransaction, link: Entity, entityType: Entity): Entity {
-        return txn.newEntity(ComparisonStoreNames.LINK_TARGET_TYPE).apply {
-            setLink(ComparisonStoreNames.LinkTargetType.LINK, link)
-            setLink(ComparisonStoreNames.LinkTargetType.ENTITY_TYPE, entityType)
-        }
+  fun newLinkTargetType(txn: StoreTransaction, link: Entity, entityType: Entity): Entity {
+    return txn.newEntity(ComparisonStoreNames.LINK_TARGET_TYPE).apply {
+      setLink(ComparisonStoreNames.LinkTargetType.LINK, link)
+      setLink(ComparisonStoreNames.LinkTargetType.ENTITY_TYPE, entityType)
     }
+  }
 
-    fun newAddedLinkTarget(
-        txn: StoreTransaction,
-        linkTargetType: Entity,
-        entityId: Long
-    ): Entity {
-        return txn.newEntity(ComparisonStoreNames.ADDED_LINK_TARGET).apply {
-            setLink(ComparisonStoreNames.LinkTarget.TYPE, linkTargetType)
-            setProperty(ComparisonStoreNames.LinkTarget.ENTITY_ID, entityId)
-        }
+  fun newAddedLinkTarget(
+    txn: StoreTransaction,
+    linkTargetType: Entity,
+    entityId: Long
+  ): Entity {
+    return txn.newEntity(ComparisonStoreNames.ADDED_LINK_TARGET).apply {
+      setLink(ComparisonStoreNames.LinkTarget.TYPE, linkTargetType)
+      setProperty(ComparisonStoreNames.LinkTarget.ENTITY_ID, entityId)
     }
+  }
 
-    fun newDeletedLinkTarget(
-        txn: StoreTransaction,
-        linkTargetType: Entity,
-        entityId: Long
-    ): Entity {
-        return txn.newEntity(ComparisonStoreNames.DELETED_LINK_TARGET).apply {
-            setLink(ComparisonStoreNames.LinkTarget.TYPE, linkTargetType)
-            setProperty(ComparisonStoreNames.LinkTarget.ENTITY_ID, entityId)
-        }
+  fun newDeletedLinkTarget(
+    txn: StoreTransaction,
+    linkTargetType: Entity,
+    entityId: Long
+  ): Entity {
+    return txn.newEntity(ComparisonStoreNames.DELETED_LINK_TARGET).apply {
+      setLink(ComparisonStoreNames.LinkTarget.TYPE, linkTargetType)
+      setProperty(ComparisonStoreNames.LinkTarget.ENTITY_ID, entityId)
     }
+  }
 }

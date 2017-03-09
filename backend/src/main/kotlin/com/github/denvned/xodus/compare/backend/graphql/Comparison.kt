@@ -1,124 +1,49 @@
-package com.github.denvned.xodus.compare.backend.graphql;
+package com.github.denvned.xodus.compare.backend.graphql
 
-import com.github.denvned.graphql.annotations.GraphQLField;
-import com.github.denvned.graphql.annotations.GraphQLNonNull;
-import com.github.denvned.xodus.compare.ComparisonStoreNames;
-import com.github.denvned.xodus.compare.backend.ComparisonStoreProvider;
-import jetbrains.exodus.entitystore.Entity;
-import jetbrains.exodus.entitystore.EntityIterable;
-import jetbrains.exodus.entitystore.StoreTransaction;
+import com.github.denvned.xodus.compare.ComparisonStoreNames
+import com.github.denvned.xodus.compare.backend.ComparisonStoreProvider
+import jetbrains.exodus.entitystore.Entity
+import jetbrains.exodus.entitystore.EntityIterable
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+class Comparison(entity: Entity) : AbstractEntityBasedNode(entity) {
 
-public final class Comparison extends AbstractEntityBasedNode {
-    public Comparison(Entity entity) {
-        super(entity);
-    }
+  val localId get() = entity.id.localId
 
-    @GraphQLField @GraphQLNonNull
-    public long getLocalId() {
-        return entity.getId().getLocalId();
-    }
+  val oldStoreDir get() = entity.getProperty(ComparisonStoreNames.Comparison.OLD_STORE_DIR) as String
 
-    @GraphQLField @GraphQLNonNull
-    public String getOldStoreDir() {
-        return (String)entity.getProperty(ComparisonStoreNames.Comparison.OLD_STORE_DIR);
-    }
+  val oldStoreName get() = entity.getProperty(ComparisonStoreNames.Comparison.OLD_STORE_NAME) as String
 
-    @GraphQLField @GraphQLNonNull
-    public String getOldStoreName() {
-        return (String)entity.getProperty(ComparisonStoreNames.Comparison.OLD_STORE_NAME);
-    }
+  val newStoreDir get() = entity.getProperty(ComparisonStoreNames.Comparison.NEW_STORE_DIR) as String
 
-    @GraphQLField @GraphQLNonNull
-    public String getNewStoreDir() {
-        return (String)entity.getProperty(ComparisonStoreNames.Comparison.NEW_STORE_DIR);
-    }
+  val newStoreName get() = entity.getProperty(ComparisonStoreNames.Comparison.NEW_STORE_NAME) as String
 
-    @GraphQLField @GraphQLNonNull
-    public String getNewStoreName() {
-        return (String)entity.getProperty(ComparisonStoreNames.Comparison.NEW_STORE_NAME);
-    }
+  val date get() = entity.getProperty(ComparisonStoreNames.Comparison.DATE) as Long
 
-    @GraphQLField @GraphQLNonNull
-    public long getDate() {
-        return (long)entity.getProperty(ComparisonStoreNames.Comparison.DATE);
-    }
+  val oldEntityCount get() = entity.getProperty(ComparisonStoreNames.Comparison.OLD_ENTITY_COUNT) as Long
 
-    @GraphQLField @GraphQLNonNull
-    public long getOldEntityCount() {
-        return (long)entity.getProperty(ComparisonStoreNames.Comparison.OLD_ENTITY_COUNT);
-    }
+  val newEntityCount get() = entity.getProperty(ComparisonStoreNames.Comparison.NEW_ENTITY_COUNT) as Long
 
-    @GraphQLField @GraphQLNonNull
-    public long getNewEntityCount() {
-        return (long)entity.getProperty(ComparisonStoreNames.Comparison.NEW_ENTITY_COUNT);
-    }
+  val oldEntitiesProcessed get() = entity.getProperty(ComparisonStoreNames.Comparison.OLD_ENTITIES_PROCESSED) as Long
 
-    @GraphQLField @GraphQLNonNull
-    public long getOldEntitiesProcessed() {
-        return (long)entity.getProperty(ComparisonStoreNames.Comparison.OLD_ENTITIES_PROCESSED);
-    }
+  val newEntitiesProcessed get() = entity.getProperty(ComparisonStoreNames.Comparison.NEW_ENTITIES_PROCESSED) as Long
 
-    @GraphQLField @GraphQLNonNull
-    public long getNewEntitiesProcessed() {
-        return (long)entity.getProperty(ComparisonStoreNames.Comparison.NEW_ENTITIES_PROCESSED);
-    }
+  val entityTypes get() = entityTypeIterable.map(::EntityType).filter {
+    it.getAddedEntities(null, null).totalCount > 0
+      || it.getChangedEntities(null, null).totalCount > 0
+      || it.getDeletedEntities(null, null).totalCount > 0
+  }.sortedBy { it.newName ?: it.oldName }
 
-    @GraphQLField @GraphQLNonNull
-    public List<@GraphQLNonNull EntityType> getEntityTypes() {
-        List<EntityType> result = new ArrayList<>();
+  val addedEntityCount get() = entityTypeIterable.map { EntityType(it).getAddedEntities(null, null).totalCount }.sum()
 
-        for (Entity entityType : getEntityTypeIterable()) {
-            EntityType entity = new EntityType(entityType);
-            if (entity.getAddedEntities(null, null).getTotalCount() > 0
-                || entity.getChangedEntities(null, null).getTotalCount() > 0
-                || entity.getDeletedEntities(null, null).getTotalCount() > 0
-            ) {
-                result.add(entity);
-            }
-        }
+  val changedEntityCount get() =
+      entityTypeIterable.map { EntityType(it).getChangedEntities(null, null).totalCount }.sum()
 
-        Collections.sort(result, Comparator.comparing(type -> {
-            String newName = type.getNewName();
-            return newName != null ? newName : type.getOldName();
-        }));
+  val deletedEntityCount get() =
+      entityTypeIterable.map { EntityType(it).getDeletedEntities(null, null).totalCount }.sum()
 
-        return result;
-    }
-
-    @GraphQLField @GraphQLNonNull
-    public long addedEntityCount() {
-        long count = 0;
-        for (Entity entityType : getEntityTypeIterable()) {
-            count += new EntityType(entityType).getAddedEntities(null, null).getTotalCount();
-        }
-        return count;
-    }
-
-    @GraphQLField @GraphQLNonNull
-    public long changedEntityCount() {
-        long count = 0;
-        for (Entity entityType : getEntityTypeIterable()) {
-            count += new EntityType(entityType).getChangedEntities(null, null).getTotalCount();
-        }
-        return count;
-    }
-
-    @GraphQLField @GraphQLNonNull
-    public long deletedEntityCount() {
-        long count = 0;
-        for (Entity entityType : getEntityTypeIterable()) {
-            count += new EntityType(entityType).getDeletedEntities(null, null).getTotalCount();
-        }
-        return count;
-    }
-
-    private EntityIterable getEntityTypeIterable() {
-        StoreTransaction txn = ComparisonStoreProvider.getStore().getCurrentTransaction();
-        return txn.findLinks(ComparisonStoreNames.ENTITY_TYPE, entity, ComparisonStoreNames.EntityType.COMPARISON);
+  private val entityTypeIterable: EntityIterable
+    get() {
+      val txn = ComparisonStoreProvider.store.currentTransaction!!
+      return txn.findLinks(ComparisonStoreNames.ENTITY_TYPE, entity, ComparisonStoreNames.EntityType.COMPARISON)
     }
 }

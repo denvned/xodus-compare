@@ -1,87 +1,33 @@
-package com.github.denvned.xodus.compare.backend.graphql;
+package com.github.denvned.xodus.compare.backend.graphql
 
-import com.github.denvned.graphql.annotations.GraphQLField;
-import com.github.denvned.graphql.annotations.GraphQLName;
-import com.github.denvned.graphql.annotations.GraphQLNonNull;
-import com.github.denvned.xodus.compare.ComparisonStoreNames;
-import com.github.denvned.xodus.compare.backend.ComparisonStoreProvider;
-import jetbrains.exodus.entitystore.Entity;
-import jetbrains.exodus.entitystore.EntityIterable;
-import jetbrains.exodus.entitystore.StoreTransaction;
+import com.github.denvned.xodus.compare.ComparisonStoreNames
+import com.github.denvned.xodus.compare.backend.ComparisonStoreProvider
+import jetbrains.exodus.entitystore.Entity
+import jetbrains.exodus.entitystore.EntityIterable
 
-public final class EntityType extends AbstractEntityBasedNode {
-    public EntityType(Entity entity) {
-        super(entity);
-    }
+class EntityType(entity: Entity) : AbstractEntityBasedNode(entity) {
 
-    @GraphQLField @GraphQLNonNull
-    public long getLocalId() {
-        return entity.getId().getLocalId();
-    }
+  val localId get() = entity.id.localId
 
-    @GraphQLField @GraphQLNonNull
-    public Comparison getComparison() {
-        return new Comparison(entity.getLink(ComparisonStoreNames.EntityType.COMPARISON));
-    }
+  val comparison get() = Comparison(entity.getLink(ComparisonStoreNames.EntityType.COMPARISON)!!)
 
-    @GraphQLField @GraphQLNonNull
-    public int getTypeId() {
-        return (int)entity.getProperty(ComparisonStoreNames.EntityType.ID);
-    }
+  val typeId get() = entity.getProperty(ComparisonStoreNames.EntityType.ID) as Int
 
-    @GraphQLField
-    public String getOldName() {
-        return (String)entity.getProperty(ComparisonStoreNames.EntityType.OLD_NAME);
-    }
+  val oldName get() = entity.getProperty(ComparisonStoreNames.EntityType.OLD_NAME) as String?
 
-    @GraphQLField
-    public String getNewName() {
-        return (String)entity.getProperty(ComparisonStoreNames.EntityType.NEW_NAME);
-    }
+  val newName get() = entity.getProperty(ComparisonStoreNames.EntityType.NEW_NAME) as String?
 
-    @GraphQLField @GraphQLNonNull
-    public AddedEntityConnection getAddedEntities(
-        @GraphQLName("first") Integer first,
-        @GraphQLName("after") String after
-    ) {
-        return new AddedEntityConnection(getEntities(
-            ComparisonStoreNames.ADDED_ENTITY),
-            first,
-            after != null ? Long.parseLong(after) : null
-        );
-    }
+  fun getAddedEntities(first: Int?, after: String?) =
+      AddedEntityConnection(getEntities(ComparisonStoreNames.ADDED_ENTITY), first, after?.toLong())
 
-    @GraphQLField @GraphQLNonNull
-    public ChangedEntityConnection getChangedEntities(
-        @GraphQLName("first") Integer first,
-        @GraphQLName("after") String after
-    ) {
-        return new ChangedEntityConnection(getEntities(
-            ComparisonStoreNames.CHANGED_ENTITY),
-            first,
-            after != null ? Long.parseLong(after) : null
-        );
-    }
+  fun getChangedEntities(first: Int?, after: String?) =
+    ChangedEntityConnection(getEntities(ComparisonStoreNames.CHANGED_ENTITY), first, after?.toLong())
 
-    @GraphQLField @GraphQLNonNull
-    public DeletedEntityConnection getDeletedEntities(
-        @GraphQLName("first") Integer first,
-        @GraphQLName("after") String after
-    ) {
-        return new DeletedEntityConnection(getEntities(
-            ComparisonStoreNames.DELETED_ENTITY),
-            first,
-            after != null ? Long.parseLong(after) : null
-        );
-    }
+  fun getDeletedEntities(first: Int?, after: String?) =
+    DeletedEntityConnection(getEntities(ComparisonStoreNames.DELETED_ENTITY), first, after?.toLong())
 
-    private EntityIterable getEntities(String changeType) {
-        StoreTransaction txn = ComparisonStoreProvider.getStore().getCurrentTransaction();
-
-        return txn.findLinks(
-            changeType,
-            entity,
-            ComparisonStoreNames.Entity.TYPE
-        );
-    }
+  private fun getEntities(changeType: String): EntityIterable {
+    val txn = ComparisonStoreProvider.store.currentTransaction!!
+    return txn.findLinks(changeType, entity, ComparisonStoreNames.Entity.TYPE)
+  }
 }

@@ -1,55 +1,24 @@
-package com.github.denvned.xodus.compare.backend.graphql;
+package com.github.denvned.xodus.compare.backend.graphql
 
-import com.github.denvned.graphql.annotations.GraphQLField;
-import com.github.denvned.graphql.annotations.GraphQLNonNull;
-import com.github.denvned.xodus.compare.ComparisonStoreNames;
-import jetbrains.exodus.ArrayByteIterable;
-import jetbrains.exodus.entitystore.Entity;
+import com.github.denvned.xodus.compare.ComparisonStoreNames
+import jetbrains.exodus.ArrayByteIterable
+import jetbrains.exodus.entitystore.Entity
 
-public final class Property {
-    private final Entity entity;
+class Property(private val entity: Entity) {
 
-    public Property(Entity entity) {
-        this.entity = entity;
-    }
+  val name get() = entity.getProperty(ComparisonStoreNames.Property.NAME) as String
 
-    @GraphQLField @GraphQLNonNull
-    public String getName() {
-        return (String)entity.getProperty(ComparisonStoreNames.Property.NAME);
-    }
+  val oldValueType get() = getValueType(ComparisonStoreNames.Property.OLD_VALUE)
 
-    @GraphQLField
-    public String getOldValueType() {
-        return getValueType(ComparisonStoreNames.Property.OLD_VALUE);
-    }
+  val newValueType get() = getValueType(ComparisonStoreNames.Property.NEW_VALUE)
 
-    @GraphQLField
-    public String getNewValueType() {
-        return getValueType(ComparisonStoreNames.Property.NEW_VALUE);
-    }
+  val oldValue get() = getValue(ComparisonStoreNames.Property.OLD_VALUE)
 
-    @GraphQLField
-    public String getOldValue() {
-        return getValue(ComparisonStoreNames.Property.OLD_VALUE);
-    }
+  val newValue get() = getValue(ComparisonStoreNames.Property.NEW_VALUE)
 
-    @GraphQLField
-    public String getNewValue() {
-        return getValue(ComparisonStoreNames.Property.NEW_VALUE);
-    }
+  private fun getValueType(valuePropName: String) = entity.getProperty(valuePropName)?.let { value ->
+    value::class.java.takeIf { it != ArrayByteIterable::class.java }?.simpleName ?: "Unknown"
+  }
 
-    private String getValueType(String valuePropName) {
-        Comparable property = entity.getProperty(valuePropName);
-        if (property == null) {
-            return null;
-        }
-
-        Class<?> clazz = property.getClass();
-        return clazz != ArrayByteIterable.class ? clazz.getSimpleName() : "Unknown";
-    }
-
-    private String getValue(String valuePropName) {
-        Comparable property = entity.getProperty(valuePropName);
-        return property != null ? property.toString() : null;
-    }
+  private fun getValue(valuePropName: String) = entity.getProperty(valuePropName)?.toString()
 }
