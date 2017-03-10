@@ -1,23 +1,17 @@
-package com.github.denvned.graphql
+package kotlinx.graphql
 
-import com.github.denvned.graphql.annotations.GraphQLRelayMutation
 import graphql.Scalars
 import graphql.relay.Relay
 import graphql.schema.*
-import graphql.schema.GraphQLNonNull
-import graphql.schema.GraphQLObjectType
+import kotlinx.graphql.annotations.GraphQLRelayMutation
 import java.util.*
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.reflect.*
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.javaMethod
 
-@Singleton
-class GraphQLTypeBuilder @Inject constructor(private val strategy: GraphQLTypeBuildingStrategy) {
+class GraphQLTypeBuilder(private val strategy: GraphQLTypeBuildingStrategy = DefaultGraphQLTypeBuildingStrategy()) {
 
-  val allObjectTypes: Set<GraphQLObjectType>
-    get() = objectTypeMap.values.asSequence().filterIsInstance<GraphQLObjectType>().toHashSet()
+  val allObjectTypes: Set<GraphQLObjectType> get() = objectTypeMap.values.filterIsInstanceTo(HashSet())
 
   private val inputObjectTypeMap = HashMap<KClass<*>, GraphQLInputObjectType>()
   private val interfaceMap = HashMap<KClass<*>, GraphQLOutputType>()
@@ -187,7 +181,7 @@ class GraphQLTypeBuilder @Inject constructor(private val strategy: GraphQLTypeBu
 
   companion object {
     private val OBJECT_METHODS =
-      sequenceOf(Any::equals, Any::hashCode, Any::toString).map { it.javaMethod }.toHashSet()
+        sequenceOf(Any::equals, Any::hashCode, Any::toString).map { it.javaMethod }.toHashSet()
 
     class MutationResult(val clientMutationId: String, val output: Any)
 

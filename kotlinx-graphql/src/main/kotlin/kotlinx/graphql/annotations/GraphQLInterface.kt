@@ -1,4 +1,4 @@
-package com.github.denvned.graphql.annotations
+package kotlinx.graphql.annotations
 
 @Target(AnnotationTarget.CLASS)
 annotation class GraphQLInterface

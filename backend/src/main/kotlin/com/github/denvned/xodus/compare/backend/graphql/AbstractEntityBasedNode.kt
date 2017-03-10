@@ -1,9 +1,8 @@
 package com.github.denvned.xodus.compare.backend.graphql
 
-import com.github.denvned.graphql.Node
-import com.github.denvned.graphql.annotations.GraphQLID
 import graphql.relay.Relay
 import jetbrains.exodus.entitystore.Entity
+import kotlinx.graphql.annotations.GraphQLID
 
 abstract class AbstractEntityBasedNode(protected val entity: Entity) : Node {
 

@@ -1,14 +1,12 @@
-package com.github.denvned.graphql
+package kotlinx.graphql
 
-import com.github.denvned.graphql.annotations.GraphQLID
-import com.github.denvned.graphql.annotations.GraphQLIgnore
-import com.github.denvned.graphql.annotations.GraphQLInterface
-import com.github.denvned.graphql.annotations.GraphQLName
-import javax.inject.Singleton
+import kotlinx.graphql.annotations.GraphQLID
+import kotlinx.graphql.annotations.GraphQLIgnore
+import kotlinx.graphql.annotations.GraphQLInterface
+import kotlinx.graphql.annotations.GraphQLName
 import kotlin.reflect.*
 import kotlin.reflect.full.findAnnotation
 
-@Singleton
 class DefaultGraphQLTypeBuildingStrategy : GraphQLTypeBuildingStrategy {
 
   override fun isIgnored(callable: KCallable<*>) = callable.isIgnoredInGraphQL

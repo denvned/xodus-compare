@@ -1,10 +1,9 @@
 package com.github.denvned.xodus.compare.backend.graphql
 
-import com.github.denvned.graphql.Node
-import com.github.denvned.graphql.annotations.GraphQLID
 import com.github.denvned.xodus.compare.ComparisonStoreNames
 import com.github.denvned.xodus.compare.backend.ComparisonStoreProvider
 import graphql.relay.Relay
+import kotlinx.graphql.annotations.GraphQLID
 import javax.inject.Singleton
 
 @Singleton

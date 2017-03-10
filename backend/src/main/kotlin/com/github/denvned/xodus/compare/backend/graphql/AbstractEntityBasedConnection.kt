@@ -1,6 +1,5 @@
 package com.github.denvned.xodus.compare.backend.graphql
 
-import com.github.denvned.graphql.PageInfo
 import jetbrains.exodus.entitystore.Entity
 import jetbrains.exodus.entitystore.EntityIterable
 import java.util.*

@@ -1,3 +1,3 @@
 rootProject.name = 'xodus-compare'
 
-include 'backend', 'frontend'
+include 'backend', 'frontend', 'kotlinx-graphql'

@@ -12,7 +12,7 @@ class GraphQLServlet : HttpServlet() {
   @Inject private lateinit var graphQLExecutor: GraphQLExecutor
 
   override fun doGet(req: HttpServletRequest, res: HttpServletResponse) {
-    res.setResponse(graphQLExecutor.execute(req.getParameter(Companion.QUERY_PARAMETER)))
+    res.setResponse(graphQLExecutor.execute(req.getParameter(QUERY_PARAMETER)))
   }
 
   override fun doPost(req: HttpServletRequest, res: HttpServletResponse) {

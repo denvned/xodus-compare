@@ -1,6 +1,8 @@
-package com.github.denvned.graphql
+package kotlinx.graphql
 
-import kotlin.reflect.*
+import kotlin.reflect.KCallable
+import kotlin.reflect.KClass
+import kotlin.reflect.KParameter
 
 interface GraphQLTypeBuildingStrategy {
   fun isIgnored(callable: KCallable<*>): Boolean

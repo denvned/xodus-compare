@@ -7,7 +7,7 @@ apply plugin: 'org.akhikhl.gretty'
 
 dependencies {
   compile 'commons-io:commons-io:2.5'
-  compile 'com.fasterxml.jackson.core:jackson-databind:2.8.3'
+  compile 'com.fasterxml.jackson.core:jackson-annotations:2.8.7'
   compile 'com.fasterxml.jackson.module:jackson-module-kotlin:2.8.7'
   compile 'com.graphql-java:graphql-java:2.1.0'
   compile 'org.jboss.weld.servlet:weld-servlet-core:2.3.5.Final'
@@ -16,6 +16,7 @@ dependencies {
   compile 'org.jetbrains.xodus:xodus-entity-store:1.0.1'
   compile 'org.jetbrains.xodus:xodus-environment:1.0.1'
   compile 'org.jetbrains.xodus:xodus-openAPI:1.0.1'
+  compile project(':kotlinx-graphql')
 }
 
 compileKotlin {

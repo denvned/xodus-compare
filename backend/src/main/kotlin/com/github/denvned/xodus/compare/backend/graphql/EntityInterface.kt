@@ -1,8 +1,7 @@
 package com.github.denvned.xodus.compare.backend.graphql
 
-import com.github.denvned.graphql.Node
-import com.github.denvned.graphql.annotations.GraphQLInterface
-import com.github.denvned.graphql.annotations.GraphQLName
+import kotlinx.graphql.annotations.GraphQLInterface
+import kotlinx.graphql.annotations.GraphQLName
 
 @GraphQLInterface
 @GraphQLName("Entity")

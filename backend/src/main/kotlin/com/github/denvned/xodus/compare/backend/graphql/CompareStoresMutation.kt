@@ -1,9 +1,10 @@
 package com.github.denvned.xodus.compare.backend.graphql
 
-import com.github.denvned.graphql.annotations.*
+import com.github.denvned.graphql.annotations.MutationProvider
 import com.github.denvned.xodus.compare.EntityStoreComparator
 import com.github.denvned.xodus.compare.EntityStoreLocation
 import com.github.denvned.xodus.compare.backend.ComparisonStoreProvider
+import kotlinx.graphql.annotations.GraphQLRelayMutation
 import javax.inject.Inject
 
 @MutationProvider
