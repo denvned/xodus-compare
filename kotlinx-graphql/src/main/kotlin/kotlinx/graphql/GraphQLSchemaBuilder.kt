@@ -9,13 +9,31 @@ import kotlin.reflect.*
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.javaMethod
 
-class GraphQLTypeBuilder(private val strategy: GraphQLTypeBuildingStrategy = DefaultGraphQLTypeBuildingStrategy()) {
+class GraphQLSchemaBuilder(
+    private val strategy: GraphQLSchemaBuildingStrategy = DefaultGraphQLSchemaBuildingStrategy()) {
 
-  val allObjectTypes: Set<GraphQLObjectType> get() = objectTypeMap.values.filterIsInstanceTo(HashSet())
-
+  private val allObjectTypes: Set<GraphQLObjectType> get() = objectTypeMap.values.filterIsInstanceTo(HashSet())
   private val inputObjectTypeMap = HashMap<KClass<*>, GraphQLInputObjectType>()
   private val interfaceMap = HashMap<KClass<*>, GraphQLOutputType>()
   private val objectTypeMap = HashMap<KClass<*>, GraphQLOutputType>()
+  private val queryTypeBuilder = GraphQLObjectType.newObject().name(strategy.queryRootTypeName)
+  private val mutationTypeBuilder = GraphQLObjectType.newObject().name(strategy.mutationRootTypeName)
+
+  fun addQueries(obj: Any) = queryTypeBuilder.addFields(obj)
+
+  fun addMutations(obj: Any) = mutationTypeBuilder.addFields(obj)
+
+  fun addObjectType(clazz: KClass<*>) = getObjectType(clazz)
+
+  fun build(): GraphQLSchema {
+    return GraphQLSchema.newSchema().query(queryTypeBuilder.build()).apply {
+      mutationTypeBuilder.build().takeUnless { it.fieldDefinitions.isEmpty() }?.let { mutation(it) }
+    }.build(allObjectTypes)
+  }
+
+  private fun GraphQLObjectType.Builder.addFields(obj: Any) {
+    fields(buildFields(obj::class, DataFetcher { _ -> obj }))
+  }
 
   private fun getInputType(type: KType, isId: Boolean): GraphQLInputType = type.clazz.let { clazz ->
     when {
@@ -107,7 +125,7 @@ class GraphQLTypeBuilder(private val strategy: GraphQLTypeBuildingStrategy = Def
 
   private fun buildInputFields(func: KFunction<*>) = func.valueParameters.map { it.toGraphQLInputObjectField() }
 
-  fun buildFields(clazz: KClass<*>, objectFetcher: DataFetcher) = (
+  private fun buildFields(clazz: KClass<*>, objectFetcher: DataFetcher) = (
       clazz.memberProperties.asSequence().filter { it.isIncluded }.map { it.toGraphQLField(objectFetcher) }
         + clazz.memberFunctions.asSequence().filter { it.isIncluded }.map {
           if (it.findAnnotation<GraphQLRelayMutation>() != null) {

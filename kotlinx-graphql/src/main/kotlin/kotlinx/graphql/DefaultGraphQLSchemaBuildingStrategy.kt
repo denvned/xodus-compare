@@ -7,7 +7,10 @@ import kotlinx.graphql.annotations.GraphQLName
 import kotlin.reflect.*
 import kotlin.reflect.full.findAnnotation
 
-class DefaultGraphQLTypeBuildingStrategy : GraphQLTypeBuildingStrategy {
+class DefaultGraphQLSchemaBuildingStrategy : GraphQLSchemaBuildingStrategy {
+
+  override val queryRootTypeName = "Query"
+  override val mutationRootTypeName = "Mutation"
 
   override fun isIgnored(callable: KCallable<*>) = callable.isIgnoredInGraphQL
 

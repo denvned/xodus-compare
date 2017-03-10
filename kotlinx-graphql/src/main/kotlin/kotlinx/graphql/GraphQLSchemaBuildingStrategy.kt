@@ -4,7 +4,10 @@ import kotlin.reflect.KCallable
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 
-interface GraphQLTypeBuildingStrategy {
+interface GraphQLSchemaBuildingStrategy {
+  val queryRootTypeName: String
+  val mutationRootTypeName: String
+
   fun isIgnored(callable: KCallable<*>): Boolean
 
   fun isInterface(clazz: KClass<*>): Boolean
